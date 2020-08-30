@@ -8,6 +8,15 @@ TODO
 
 **Language**: R
 
+## Data
+
+Data was provided by the instructor (link provided below).
+Use `get_data.R` to download the data for this case study.
+
+```bash
+$ Rscript get_data.R
+```
+
 ## Provided Materials
 
 * Starter code: [http://rdatasciencecases.org/GeoLoc/code.R](http://rdatasciencecases.org/GeoLoc/code.R)
