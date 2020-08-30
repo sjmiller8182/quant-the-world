@@ -1,3 +1,10 @@
+
+# case study 1 ignores
+case_study_1/offline.data.txt
+case_study_1/online.data.txt
+
+# R ignores
+
 # History files
 .Rhistory
 .Rapp.history
