@@ -2,6 +2,8 @@
 # case study 1 ignores
 case_study_1/offline.data.txt
 case_study_1/online.data.txt
+case_study_1/*.tex
+case_study_1/real-time_location_system_case_study_files/
 
 # R ignores
 
