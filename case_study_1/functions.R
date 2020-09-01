@@ -1,4 +1,42 @@
 
+#' Process a single line of the data files.
+#'
+#' @description
+#' Produces a list of matricies from a data line.
+#' The columns are as follows:
+#' time, scanMAC, positionX, positionY, positionZ,
+#' orientation, MAC, signalRSSI, channel, router_type
+#'
+#' @param x A file line
+#'
+processLine = function(x)
+{
+  # tokenize line on delimiters ;=,
+  tokens = strsplit(x, "[;=,]")[[1]]
+  # return null when there are no measurements
+  if (length(tokens) == 10) 
+    return(NULL)
+  # get matrix of measured RSSI
+  tmp = matrix(tokens[ - (1:10) ], , 4, byrow = TRUE)
+  # add handheld device data and return resulting matrix
+  cbind(matrix(tokens[c(2, 4, 6:8, 10)], nrow(tmp), 6, 
+               byrow = TRUE), tmp)
+}
+
+#' Round the measurement angle to the nearest 45 deg.
+#'
+#' @param angles a vector of angles; expected 0 - 360
+#'
+roundOrientation = function(angles) 
+  {
+  # create a sequence of reference angles
+  # 0, 45, 90, ... , 315
+  refs = seq(0, by = 45, length  = 9)
+  # round angles to the closest reference value
+  q = sapply(angles, function(o) which.min(abs(o - refs)))
+  c(refs[1:8], 0)[q]
+}
+
 
 #' Load data files for this case study.
 #' 
@@ -7,7 +45,7 @@
 #' "time", "posX", "posY", "orientation", "mac", "signal",
 #' "rawTime", "angle"
 #' 
-#' Only regular access points are kept (type==3).
+#' Only regular access points are kept (router_type==3).
 #' Time is converted from milliseconds to seconds.
 #' 
 #'
