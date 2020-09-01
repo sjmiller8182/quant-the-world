@@ -1,0 +1,82 @@
+---
+title: "Real-Time Indoor Location Positioning"
+author: "paula@smu, J-Dog, Miller"
+date: January 12, 2018
+abstract: |
+  The expected content of a case study for classwork is described.
+  An alternative content is proposedand described.
+  Both a formal written document (such as written here) or
+  a Jupyter Notebook with appropriate content may be presented
+lang: en-US
+class: man
+# figsintext: true
+numbersections: true
+encoding: UTF-8
+bibliography: references.bib
+biblio-style: apalike
+output:
+  bookdown::pdf_document2:
+     citation_package: natbib
+     keep_tex: true
+     toc: false
+header-includes:
+   - \usepackage{amsmath}
+   - \usepackage[utf8]{inputenc}
+   - \usepackage[T1]{fontenc}
+   - \usepackage{setspace}
+   - \usepackage{hyperref}
+   - \onehalfspacing
+   - \setcitestyle{numbers,square,super}
+   - \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, lib-read, results='hide', message=FALSE, include=FALSE, echo=FALSE}
+# libraries
+
+# set a random seed for repodicibility
+set.seed(42)
+
+# functions
+source('./functions.R')
+
+# load the data
+offline <- readData()
+online <- readData(filename = './online.data.txt',
+                   subMacs = unique(offline$mac))
+```
+
+# Introduction
+
+TODO \cite{NolanLang}
+
+# Methods
+
+TODO
+
+# Results
+
+TODO
+
+# Conclusion
+
+TODO
+
+
+\newpage
+
+\appendix
+
+# Code
+
+
+```
+A code block
+cool
+cool
+code
+yo
+```
+
+
