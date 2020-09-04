@@ -34,17 +34,27 @@ editor_options:
 
 ```{r, lib-read, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 # libraries
+library(tidyverse)
+source('./functions.R')
 
 # set a random seed for repodicibility
 set.seed(42)
 
-# functions
-source('./functions.R')
 
 # load the data
 offline <- readData()
 online <- readData(filename = './online.data.txt',
                    subMacs = unique(offline$mac))
+
+macAddresses <- sort(unique(offline$mac))
+
+# create a unique position identifier
+offline$posXY <- paste(offline$posX, offline$posY, sep = '-')
+online$posXY <- paste(online$posX, online$posY, sep = '-')
+
+
+
+
 ```
 
 # Introduction
@@ -53,16 +63,52 @@ TODO \cite{NolanLang}
 
 # Methods
 
-TODO
+## Describe how you prepared the data.
+
+ddescription (stuart)
+
+## What modeling method you used
+
+model description (stuart)
+
+## Describe how you estimated your error and found the best fit ASSUMING you CANNOT USE THE ONLINE DATA.
+
+kold cross validation (paul)
+
+
 
 # Results
 
-TODO
+Use a table to describe the results (markdown table)
+
+## Describe the best fit for the data.
+
+I think this is just k, plots that show error over k (1-15)
+
+There are 2 macIDs located at the same position.  
+Does one give better performance than the other?
+(00:0f:a3:39:e1:c0, 00:0f:a3:39:dd:cd)
+
+
+## What about using them both?
+
+Use c0, then use cd, than use cd and c0
+
+a plot with all three models
 
 # Conclusion
 
-TODO
+## What is the drawback (if any of using this method to real-time locate an object)?
 
+KNN is slow. calculation scales as n^2/2. Considers the whole dataset.
+
+Describe a method that may be an improvement based on your perceived drawbacks.
+
+Linear regression, assuming the assumptions are met
+
+* Variance of the residuals is constant
+* Normally distributed residuals
+* No outlier + leverage points
 
 \newpage
 
