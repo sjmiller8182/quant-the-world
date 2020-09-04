@@ -35,6 +35,7 @@ editor_options:
 ```{r, lib-read, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 # libraries
 library(tidyverse)
+library(reshape2)
 source('./functions.R')
 
 # set a random seed for repodicibility
@@ -59,17 +60,45 @@ online$posXY <- paste(online$posX, online$posY, sep = '-')
 
 # Introduction
 
-TODO \cite{NolanLang}
+
+Define
+
+* AP
+* MAC
+* scan MAC
 
 # Methods
 
-## Describe how you prepared the data.
+## Data 
 
-ddescription (stuart)
+The data are provided as measurement logs with
+ measurement position, measurement orientation, AP signal strength, and timestamp on a single line.
+We extracted the data by reading each line and tokenizing each unit of information.
+The data was initially organized in a long format data frame with
+ time, position X, Y, and Z, orientation, AP MAC address, signal strength, and channel as the columns.
+Once the data was organized, we were able to determine that several columns were not necessary.
+Specifically, we removed position Z and the scan MAC address because these were fixed throughout the experiment
+ and channel because each AP used a single channel throughout the experiment.
+We also found that several MAC addresses were coded as \textit{adhoc} (type=1).
+These were removed since we are only interested in positioning based on the fixed APs (type=3).
+Additionally, we determined that there some noise present in the orientation measurement.
+The experiment specified that only 8 angles were considered (each 45\textdegree increment from 0).
+All orientation values were rouned to the nearest 45\textdegree increment.
+
+ 
+```{r, echo=FALSE}
+offline_pivot <- offline %>% spread('mac', 'signal')
+```
+
 
 ## What modeling method you used
 
 model description (stuart)
+
+```{r, echo=FALSE}
+
+```
+
 
 ## Describe how you estimated your error and found the best fit ASSUMING you CANNOT USE THE ONLINE DATA.
 
