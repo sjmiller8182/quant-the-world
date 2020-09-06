@@ -1,12 +1,7 @@
 ---
 title: "Real-Time Indoor Location Positioning"
-author: "paula@smu, J-Dog, Miller"
-date: January 12, 2018
-abstract: |
-  The expected content of a case study for classwork is described.
-  An alternative content is proposedand described.
-  Both a formal written document (such as written here) or
-  a Jupyter Notebook with appropriate content may be presented
+author: "Justin Howard, Paul Adams, and Stuart Miller"
+date: September 8, 2020
 lang: en-US
 class: man
 # figsintext: true
@@ -21,12 +16,12 @@ output:
      toc: false
 header-includes:
    - \usepackage{amsmath}
+   - \usepackage{gensymb}
    - \usepackage[utf8]{inputenc}
    - \usepackage[T1]{fontenc}
    - \usepackage{setspace}
    - \usepackage{hyperref}
    - \onehalfspacing
-   - \setcitestyle{numbers,square,super}
    - \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 editor_options: 
   chunk_output_type: console
@@ -35,7 +30,7 @@ editor_options:
 ```{r, lib-read, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 # libraries
 library(tidyverse)
-library(reshape2)
+library(caret)
 source('./functions.R')
 
 # set a random seed for repodicibility
@@ -52,82 +47,242 @@ macAddresses <- sort(unique(offline$mac))
 # create a unique position identifier
 offline$posXY <- paste(offline$posX, offline$posY, sep = '-')
 online$posXY <- paste(online$posX, online$posY, sep = '-')
-
-
-
-
 ```
 
 # Introduction
 
 
-Define
+Real Time Location Systems (RTLS) that are capable of tracking business assets and people in special circumstances,
+ are a popular area of research. 
+Warehouse distribution and delivery services have grown more rapidly due to the COVID-19 pandemic,
+ and with that growth, we can expect the relative importance of tracking assets at scale to increase.
+In this case study, we assess whether it is possible to predict locations based on the measurement
+ of WiFi signals from fixed access points (AP)\footnotemark.
+Additionally, two APs are placed in close proximity, we assess the impact of using both of these APs.
+The location sensing system analyzed in this case study is located in an indoor office environment
+ on a single floor of a building.
 
-* AP
-* MAC
-* scan MAC
+\footnotetext{This analysis was conducted with the R programming language (\cite{R}).}
 
 # Methods
 
 ## Data 
 
-The data are provided as measurement logs with
- measurement position, measurement orientation, AP signal strength, and timestamp on a single line.
+### Data Collection
+
+The data was collected in an indoor office environment on a single floor with 7 fixed WiFi APs.
+The WiFi APs are identifiable by their media-access-control (MAC) addresses.
+It is shown by \cite{NolanLang} that two of these APs 
+ (\texttt{00:0f:a3:39:e1:c0} and \texttt{00:0f:a3:39:dd:cd})
+ are positioned in close proximity.
+The experiment area was split into a grid 166 measurement points, which were spaced 1 meter apart.
+The points of measurement are referred to as `posX` and `posY`.
+Using a handheld WiFi scanning device, WiFi signal strength measurements were collected at each of the 166 locations.
+Additionally, the handheld WiFi scanning device was rotated to 8 angles 
+ (45\degree  increments from 0)
+ at each measurement location.
+The resulting dataset contains approximately one million measurements.
+
+### Data Cleaning
+
+The data are provided as measurement logs with the MAC address of the scanning device, 
+ measurement position, measurement orientation, AP MAC address, AP signal strength,
+ and timestamp on a single line.
 We extracted the data by reading each line and tokenizing each unit of information.
 The data was initially organized in a long format data frame with
  time, position X, Y, and Z, orientation, AP MAC address, signal strength, and channel as the columns.
 Once the data was organized, we were able to determine that several columns were not necessary.
 Specifically, we removed position Z and the scan MAC address because these were fixed throughout the experiment
  and channel because each AP used a single channel throughout the experiment.
-We also found that several MAC addresses were coded as \textit{adhoc} (type=1).
-These were removed since we are only interested in positioning based on the fixed APs (type=3).
+We also found that several MAC addresses were coded as \textit{adhoc} (\texttt{type=1}).
+These were removed since we are only interested in positioning based on the fixed APs (\texttt{type=3}).
 Additionally, we determined that there some noise present in the orientation measurement.
-The experiment specified that only 8 angles were considered (each 45\textdegree increment from 0).
-All orientation values were rouned to the nearest 45\textdegree increment.
+The experiment specified that only 8 angles were considered (each 45\degree  increment from 0).
+All orientation values were rouned to the nearest 45\degree increment.
+Any missing signal values were filled with -100, imputing it as a very low strength signal.
 
  
 ```{r, echo=FALSE}
-offline_pivot <- offline %>% spread('mac', 'signal')
+offline_pivot <- offline %>% 
+   pivot_wider(names_from = mac,
+               values_from = 'signal',
+               values_fn = list(signal=mean))
+offline_pivot[is.na(offline_pivot)] <- -100
 ```
 
 
-## What modeling method you used
+## Modeling Method
 
-model description (stuart)
+We chose to model the position as a function of the WiFi singal strength with 
+\textit{k}-nearest neighbors (\textit{k}-NN).
+Intuitively, a \textit{k}-NN model will predict a new position as the average positions of the closest \textit{k}
+ data points in the training data based on the WiFi signals.
+Since the features are microwaves, which can pass through physical barriers,
+ we used euclidean distance to determine the closest signals.
+To use a \textit{k}-NN, the value of k most be estimated based on the training data.
+We used 5-fold cross validation to determine the value of \textit{k},
+ selecting the value of \textit{k} that produced the lowest error based on root meean squared error (RMSE).
+
+An advantage of \textit{k}-NN is that it is non-parametric, thus it not necessary to assess whether the data
+ exhibit certain distributional properties.
+However, a potential disadvantage of \textit{k}-NN is the computational complexity,
+ which is given by (\ref{eqn:knncomplexity}) for large $N$.
+This time complexity means a \textit{k}-NN would not be suitable for modeling position in large areas as the number measurement points would be large.
+
+
+\begin{equation}
+\label{eqn:knncomplexity}
+O\left(n\right) \sim \frac{n^2}{2}
+\end{equation}
+
+
+
+## Model Validation
+
+(Describe how you estimated your error and found the best fit ASSUMING you CANNOT USE THE ONLINE DATA.)
+
+kold cross validation 
+
+
+
+
+
+
+
+
 
 ```{r, echo=FALSE}
 
+offline_subset <- select(offline_pivot, c("posX", "posY", 'posXY', "angle",
+                                    "00:14:bf:b1:97:8a", "00:14:bf:b1:97:90", "00:0f:a3:39:e1:c0",
+                                    "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81", "00:14:bf:3b:c7:c6",
+                                    "00:0f:a3:39:dd:cd"))
+
+offline_subset <- offline_subset %>% filter(angle > 135 - 4 & angle < 135 + 4)
+
+
+knn.grid <- expand.grid(k = seq(1:15))
+
+train.control <- trainControl(method = 'cv', number = 5)
+
+# fit a model for posX with AP c0
+model.c0.x <- train(
+   posX ~ . ,
+   data = offline_subset %>% select(-c("posY","posXY", "00:0f:a3:39:dd:cd")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posY with AP c0
+model.c0.y <- train(
+   posY ~ . ,
+   data = offline_subset %>% select(-c("posX","posXY", "00:0f:a3:39:dd:cd")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posX with AP cd
+model.cd.x <- train(
+   posX ~ . ,
+   data = offline_subset %>% select(-c("posY","posXY", "00:0f:a3:39:e1:c0")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posY with AP cd
+model.cd.y <- train(
+   posY ~ . ,
+   data = offline_subset %>% select(-c("posX","posXY", "00:0f:a3:39:e1:c0")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posX with all APs
+model.all.x <- train(
+   posX ~ . ,
+   data = offline_subset %>% select(-c("posY","posXY")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posY with all APs
+model.all.y <- train(
+   posY ~ . ,
+   data = offline_subset %>% select(-c("posX","posXY")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+errors <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.y$results$k)),
+      rep('AP-c0', length(model.all.y$results$k)),
+      rep('AP-cd', length(model.all.y$results$k))),
+   error = c(model.all.y$results$RMSE^2 + model.all.x$results$RMSE^2,
+                 model.c0.y$results$RMSE^2 + model.c0.x$results$RMSE^2,
+                 model.cd.y$results$RMSE^2 + model.cd.x$results$RMSE^2)
+)
+
 ```
-
-
-## Describe how you estimated your error and found the best fit ASSUMING you CANNOT USE THE ONLINE DATA.
-
-kold cross validation (paul)
-
-
 
 # Results
 
-Use a table to describe the results (markdown table)
+As shown in Fig. 1, we found that \texttt{k} of 4 or 5 minimized the RMSE of all three models.
+Based the CV results, 4 was chosen as the value of \texttt{k} for the \texttt{k}-NN model.
 
-## Describe the best fit for the data.
+```{r, echo=FALSE}
+errors %>%
+   ggplot(aes(x = k, y = error, color = model)) +
+   geom_line() + 
+   xlab('k Neighbors') +
+   ylab('RMSE') +
+   ggtitle('RMSE of Models with 5-fold CV Over k') +
+   labs(caption = paste(
+      'Figure 1:',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),\n',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd) for k values 1 through 15.')
+      ) +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+```
 
-I think this is just k, plots that show error over k (1-15)
 
-There are 2 macIDs located at the same position.  
-Does one give better performance than the other?
-(00:0f:a3:39:e1:c0, 00:0f:a3:39:dd:cd)
+**What about using them both?**
 
 
-## What about using them both?
+* There are 2 macIDs located at the same position.  
+* Does one give better performance than the other?
+* (00:0f:a3:39:e1:c0, 00:0f:a3:39:dd:cd)
+
 
 Use c0, then use cd, than use cd and c0
 
 a plot with all three models
 
+| AP Feature Set         | Mean Squared Error | 
+|------------------------|--------------------|
+| Excluding \texttt{00:0f:a3:39:dd:cd}  | XX                 |
+| Excluding \texttt{00:0f:a3:39:e1:c0}  | XX                 |
+| All APs                | XX                 |
+
+
+
+
+
+
 # Conclusion
 
-## What is the drawback (if any of using this method to real-time locate an object)?
+(What is the drawback (if any of using this method to real-time locate an object)?)
 
 KNN is slow. calculation scales as n^2/2. Considers the whole dataset.
 
@@ -139,19 +294,112 @@ Linear regression, assuming the assumptions are met
 * Normally distributed residuals
 * No outlier + leverage points
 
+Given that electromagnetic signals fall off as $1/r^2$, we could potentionally use polynomial regression.
+
 \newpage
 
 \appendix
 
 # Code
 
+The code used to produce the analysis in shown below.
 
 ```
-A code block
-cool
-cool
-code
-yo
+
+#' Process a single line of the data files.
+#'
+#' @description
+#' Produces a list of matricies from a data line.
+#' The columns are as follows:
+#' time, scanMAC, positionX, positionY, positionZ,
+#' orientation, MAC, signalRSSI, channel, router_type
+#'
+#' @param x A file line
+#'
+processLine = function(x)
+{
+  # tokenize line on delimiters ;=,
+  tokens = strsplit(x, "[;=,]")[[1]]
+  # return null when there are no measurements
+  if (length(tokens) == 10) 
+    return(NULL)
+  # get matrix of measured RSSI
+  tmp = matrix(tokens[ - (1:10) ], , 4, byrow = TRUE)
+  # add handheld device data and return resulting matrix
+  cbind(matrix(tokens[c(2, 4, 6:8, 10)], nrow(tmp), 6, 
+               byrow = TRUE), tmp)
+}
+
+#' Round the measurement angle to the nearest 45 deg.
+#'
+#' @param angles a vector of angles; expected 0 - 360
+#'
+roundOrientation = function(angles) 
+  {
+  # create a sequence of reference angles
+  # 0, 45, 90, ... , 315
+  refs = seq(0, by = 45, length  = 9)
+  # round angles to the closest reference value
+  q = sapply(angles, function(o) which.min(abs(o - refs)))
+  c(refs[1:8], 0)[q]
+}
+
+
+#' Load data files for this case study.
+#' 
+#' @description
+#' Produces a data.frame with the following columns
+#' "time", "posX", "posY", "orientation", "mac", "signal",
+#' "rawTime", "angle"
+#' 
+#' Only regular access points are kept (router_type==3).
+#' Time is converted from milliseconds to seconds.
+#' 
+#'
+#' @param filename The path to the data file
+#' @param subMacs A vector of MAC addresses to use in the data
+#'
+readData = 
+  function(filename = './offline.data.txt', 
+           subMacs = c("00:0f:a3:39:e1:c0", "00:0f:a3:39:dd:cd", "00:14:bf:b1:97:8a",
+                       "00:14:bf:3b:c7:c6", "00:14:bf:b1:97:90", "00:14:bf:b1:97:8d",
+                       "00:14:bf:b1:97:81"))
+  {
+    txt <- readLines(filename)
+    lines <- txt[ substr(txt, 1, 1) != "#" ]
+    tmp <- lapply(lines, processLine)
+    offline <- as.data.frame(do.call("rbind", tmp), 
+                             stringsAsFactors= FALSE) 
+    
+    names(offline) <- c("time", "scanMac", 
+                        "posX", "posY", "posZ", "orientation", 
+                        "mac", "signal", "channel", "type")
+    
+    # keep only signals from access points
+    offline <- offline[ offline$type == "3", ]
+    
+    # drop scanMac, posZ, channel, and type - no info in them
+    dropVars <- c("scanMac", "posZ", "channel", "type")
+    offline <- offline[ , !( names(offline) %in% dropVars ) ]
+    
+    # drop more unwanted access points
+    offline <- offline[ offline$mac %in% subMacs, ]
+    
+    # convert numeric values
+    numVars <- c("time", "posX", "posY", "orientation", "signal")
+    offline[ numVars ] <- lapply(offline[ numVars ], as.numeric)
+    
+    # convert time to POSIX
+    offline$rawTime <- offline$time
+    offline$time <- offline$time/1000
+    class(offline$time) <- c("POSIXt", "POSIXct")
+    
+    # round orientations to nearest 45
+    offline$angle = roundOrientation(offline$orientation)
+    
+    return(offline)
+  }
+
 ```
 
 
