@@ -142,9 +142,152 @@ O\left(n\right) \sim \frac{n^2}{2}
 (Describe how you estimated your error and found the best fit ASSUMING you CANNOT USE THE ONLINE DATA.)
 
 kold cross validation 
+Predicting the real-time X- and Y-coordinate positions using K-Nearest Neighbors required the constructing an ensemble model. The first
+model we built contained all devices. The second model we built included all but the device excluding MAC address 00:0f:a3:39:dd:cd.
+Finally, we developed a third model which did not include the device identified as 00:0f:a3:39:e1:c0. We made this comparison because
+both of those explicitly mentioned devices were positioned at the same location within the study. We modeled along this process for both
+X- and Y-coordinate location prediction sets.
+
+As mentioned below, we obtained the lowest measures of error for positions X by setting \texttt{k} to 4 and positions Y by settting
+\texttt{k} to 5. However, this was derived for internal-cross validation. In order to simulate a measure of error that could be expected
+after applying to the data once the system is online (online data set), we applied cross-validation to a holdout data set, comprised of
+25% of the offline data set. For this analysis, we trained the offline data set on 75%. Because there was a holdout of 25%, we applied
+repeated cross-validation to build the models, using 5 folds with each of the 15 repeats to prevent model training information loss.
+
+```{r, Hold-Out Testing for Online Error Simulation, results='hide', message=FALSE, include=FALSE, echo=FALSE}
+###########################################
+############# Prepare Offline
+###########################################
+sapply(offline_pivot, class)
+offline_pivot$time = as.double(offline_pivot$time)
+offline_pivot$posX = as.double(offline_pivot$posX)
+offline_pivot$posY = as.double(offline_pivot$posY)
+offline_pivot$posZ = as.double(offline_pivot$posZ)
+offline_pivot$orientation = as.double(offline_pivot$orientation)
+offline_pivot$type = as.double(offline_pivot$type)
+sapply(offline_pivot, class)
+
+#offline_pivot = subset(offline_pivot, select = -c(nas))
+
+###########################################
+############# Prepare Online
+###########################################
+sapply(online_pivot, class)
+online_pivot$time = as.double(online_pivot$time)
+online_pivot$posX = as.double(online_pivot$posX)
+online_pivot$posY = as.double(online_pivot$posY)
+online_pivot$posZ = as.double(online_pivot$posZ)
+online_pivot$orientation = as.double(online_pivot$orientation)
+online_pivot$type = as.double(online_pivot$type)
+sapply(online_pivot, class)
+
+# 75/25 train/test split:
+offline_train_75 = offline_pivot[1:floor((dim(offline_pivot)[[1]]*0.75)),] #686,213 training samples
+offline_test_25 = offline_pivot[ceiling((dim(offline_pivot)[[1]]*0.75)):dim(offline_pivot)[[1]],] # 228, 738 testing samples
+
+offline_train_subset <- offline_train_75 %>% filter(orientation < 135-4 & orientation < 135+4)
+
+sapply(offline_train_subset, function(cnt) sum(length(which(is.na(cnt)))))
+
+                                                        #XXXXXXXXXXXXXXXXXXX#
+                                                        #XXXXXXXXXXXXXXXXXXX#
+                                                        #  Building for X   #
+                                                        #XXXXXXXXXXXXXXXXXXX#
+                                                        #XXXXXXXXXXXXXXXXXXX#
+
+trainContrl <- trainControl(method="repeatedcv", repeats = 15, number = 5)
+#knn.grid <- expand.grid(k = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15))
+knn.grid <- expand.grid(k = seq(1:15))
+
+knn_fit.posX.allMAC <- train(posX ~ .
+                             , data=subset(offline_train_subset, select = -c(time, posY, posZ, type))
+                             , method = "knn"
+                             , trControl=trainContrl
+                             , metric = "RMSE"
+                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
+                             )
 
 
+########## End of using all MACs
 
+knn_fit.posX.c0MAC <- train(posX ~ .
+                             , data=subset(offline_train_subset, select = -c(time, posY, posZ, `00:0f:a3:39:dd:cd`))
+                             , method = "knn"
+                             , trControl=trainContrl
+                             , metric = "RMSE"
+                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
+                             )
+
+########## End of using MAC c0
+
+knn_fit.posX.cdMAC <- train(posX ~ .
+                             , data=subset(offline_train_subset, select = -c(time, posY, posZ,`00:0f:a3:39:e1:c0`))
+                             , method = "knn"
+                             , trControl=trainContrl
+                             , metric = "RMSE"
+                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
+                             )
+                             
+########## End of using MAC cd
+
+
+                                                        #YYYYYYYYYYYYYYYYYYY#
+                                                        #YYYYYYYYYYYYYYYYYYY#
+                                                        #  Building for Y   #
+                                                        #YYYYYYYYYYYYYYYYYYY#
+                                                        #YYYYYYYYYYYYYYYYYYY#
+
+knn_fit.posY.allMAC <- train(posY ~ .
+                             , data=subset(offline_train_subset, select = -c(time, posX, posZ, type))
+                             , method = "knn"
+                             , trControl=trainContrl
+                             , metric = "RMSE"
+                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
+                             )
+
+########## End of using all MACs
+
+knn_fit.posY.c0MAC <- train(posY ~ .
+                             , data=subset(offline_train_subset, select = -c(time, posX, posZ, `00:0f:a3:39:dd:cd`))
+                             , method = "knn"
+                             , trControl=trainContrl
+                             , metric = "RMSE"
+                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
+                             )
+
+########## End of using MAC c0
+
+knn_fit.posY.cdMAC <- train(posY ~ .
+                             , data=subset(offline_train_subset, select = -c(time, posX, posZ,`00:0f:a3:39:e1:c0`))
+                             , method = "knn"
+                             , trControl=trainContrl
+                             , metric = "RMSE"
+                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
+                             )
+                             
+########## End of using MAC cd
+
+X_preds.allMAC <- predict(knn_fit.posX.allMAC, newdata = subset(offline_test, select = -c(time, posY, posZ)))
+Y_preds.allMAC <- predict(knn_fit.posY.allMAC, newdata = subset(offline_test, select = -c(time, posX, posZ)))
+
+X_res = data.frame(X_preds.allMAC, offline_test$posX)
+Y_res = data.frame(Y_preds.allMAC, offline_test$posY)
+names(X_res) <- c('preds','actuals')
+names(Y_res) <- c('preds','actuals')
+X_res$residuals = X_res$preds - X_res$actuals
+Y_res$residuals = Y_res$preds - Y_res$actuals
+
+X_RSS <- c(crossprod(X_res$residuals))
+X_MSE <- X_RSS / length(X_res$residuals)
+X_RMSE <- sqrt(X_MSE)
+
+Y_RSS <- c(crossprod(Y_res$residuals))
+Y_MSE <- Y_RSS / length(Y_res$residuals)
+Y_RMSE <- sqrt(Y_MSE)
+
+comboRMSE <- sqrt(X_MSE + Y_MSE)
+
+```
 
 
 
