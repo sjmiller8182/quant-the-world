@@ -187,7 +187,6 @@ offline_test_25 = offline_pivot[ceiling((dim(offline_pivot)[[1]]*0.75)):dim(offl
 
 offline_train_subset <- offline_train_75 %>% filter(orientation < 135-4 & orientation < 135+4)
 
-sapply(offline_train_subset, function(cnt) sum(length(which(is.na(cnt)))))
 
                                                         #XXXXXXXXXXXXXXXXXXX#
                                                         #XXXXXXXXXXXXXXXXXXX#
@@ -286,11 +285,17 @@ Y_MSE <- Y_RSS / length(Y_res$residuals)
 Y_RMSE <- sqrt(Y_MSE)
 
 comboRMSE <- sqrt(X_MSE + Y_MSE)
-
+comboRMSE
 ```
+The estimated Root Mean Square Error for the ensemble model applied to the online data set is roughly 7.638. We derived this value by
+taking the mean squared error for the residual values on the holdout sets for both the predicted X positions and predicted Y positions.
+The model estimating positions Y outperformed the model estimated positions X by RMSE of 1.823 to 7.418, respectively.
 
-
-
+| Positional Predictions           | Root Mean Squared Error | 
+|----------------------------------|-------------------------|
+| Predicted X                      | 7.418                   |
+| Predicted Y                      | 1.823                   |
+| Online X-Y Ensemble Predictions  | 7.638                   |
 
 
 
