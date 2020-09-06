@@ -29,13 +29,13 @@ editor_options:
 
 ```{r, lib-read, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 # libraries
-library(tidyverse)
-library(caret)
+library(pacman)
+p_load(tidyverse, caret, dplyr, magrittr, knitr, tidyr)
+setwd('C:/Users/Pablo/Desktop/qtw-repo_2/case_study_1')
 source('./functions.R')
 
 # set a random seed for repodicibility
 set.seed(42)
-
 
 # load the data
 offline <- readData()
@@ -104,7 +104,7 @@ Any missing signal values were filled with -100, imputing it as a very low stren
  
 ```{r, echo=FALSE}
 offline_pivot <- offline %>% 
-   pivot_wider(names_from = mac,
+   tidyr::pivot_wider(names_from = mac,
                values_from = 'signal',
                values_fn = list(signal=mean))
 offline_pivot[is.na(offline_pivot)] <- -100
@@ -154,39 +154,42 @@ after applying to the data once the system is online (online data set), we appli
 25% of the offline data set. For this analysis, we trained the offline data set on 75%. Because there was a holdout of 25%, we applied
 repeated cross-validation to build the models, using 5 folds with each of the 15 repeats to prevent model training information loss.
 
-```{r, Hold-Out Testing for Online Error Simulation, results='hide', message=FALSE, include=FALSE, echo=FALSE}
+```{r, Hold-Out Testing for Online Error Simulation - Data Prep, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 ###########################################
 ############# Prepare Offline
 ###########################################
-sapply(offline_pivot, class)
+#sapply(offline_pivot, class)
 offline_pivot$time = as.double(offline_pivot$time)
 offline_pivot$posX = as.double(offline_pivot$posX)
 offline_pivot$posY = as.double(offline_pivot$posY)
 offline_pivot$posZ = as.double(offline_pivot$posZ)
 offline_pivot$orientation = as.double(offline_pivot$orientation)
 offline_pivot$type = as.double(offline_pivot$type)
-sapply(offline_pivot, class)
+#sapply(offline_pivot, class)
 
 #offline_pivot = subset(offline_pivot, select = -c(nas))
 
 ###########################################
 ############# Prepare Online
 ###########################################
-sapply(online_pivot, class)
+#sapply(online_pivot, class)
 online_pivot$time = as.double(online_pivot$time)
 online_pivot$posX = as.double(online_pivot$posX)
 online_pivot$posY = as.double(online_pivot$posY)
 online_pivot$posZ = as.double(online_pivot$posZ)
 online_pivot$orientation = as.double(online_pivot$orientation)
 online_pivot$type = as.double(online_pivot$type)
-sapply(online_pivot, class)
+#sapply(online_pivot, class)
 
 # 75/25 train/test split:
 offline_train_75 = offline_pivot[1:floor((dim(offline_pivot)[[1]]*0.75)),] #686,213 training samples
 offline_test_25 = offline_pivot[ceiling((dim(offline_pivot)[[1]]*0.75)):dim(offline_pivot)[[1]],] # 228, 738 testing samples
 
 offline_train_subset <- offline_train_75 %>% filter(orientation < 135-4 & orientation < 135+4)
+```
 
+
+```{r, Hold-Out Testing for Online Error Simulation - Model Construct, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 
                                                         #XXXXXXXXXXXXXXXXXXX#
                                                         #XXXXXXXXXXXXXXXXXXX#
@@ -265,7 +268,10 @@ knn_fit.posY.cdMAC <- train(posY ~ .
                              )
                              
 ########## End of using MAC cd
+```
 
+
+```{r, Hold-Out Testing for Online Error Simulation - Preds and RMSE, results='hide', message=FALSE, include=FALSE, echo=FALSE}
 X_preds.allMAC <- predict(knn_fit.posX.allMAC, newdata = subset(offline_test, select = -c(time, posY, posZ)))
 Y_preds.allMAC <- predict(knn_fit.posY.allMAC, newdata = subset(offline_test, select = -c(time, posX, posZ)))
 
