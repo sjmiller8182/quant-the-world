@@ -31,7 +31,13 @@ editor_options:
 # libraries
 library(pacman)
 p_load(tidyverse, caret, dplyr, magrittr, knitr, tidyr)
-setwd('C:/Users/Pablo/Desktop/qtw-repo_2/case_study_1')
+#library(tidyverse)
+#library(caret)
+#library(dplyr)
+#library(magrittr)
+#library(knitr)
+#library(tidyr)
+#setwd('C:/Users/Pablo/Desktop/qtw-repo_2/case_study_1')
 source('./functions.R')
 
 # set a random seed for repodicibility
@@ -102,12 +108,18 @@ All orientation values were rouned to the nearest 45\degree increment.
 Any missing signal values were filled with -100, imputing it as a very low strength signal.
 
  
-```{r, echo=FALSE}
+```{r, pivotal chunk, echo=FALSE}
 offline_pivot <- offline %>% 
    tidyr::pivot_wider(names_from = mac,
                values_from = 'signal',
                values_fn = list(signal=mean))
 offline_pivot[is.na(offline_pivot)] <- -100
+
+online_pivot <- online %>% 
+   tidyr::pivot_wider(names_from = mac,
+               values_from = 'signal',
+               values_fn = list(signal=mean))
+online_pivot[is.na(online_pivot)] <- -100
 ```
 
 
@@ -145,174 +157,26 @@ kold cross validation
 Predicting the real-time X- and Y-coordinate positions using K-Nearest Neighbors required the constructing an ensemble model. The first
 model we built contained all devices. The second model we built included all but the device excluding MAC address 00:0f:a3:39:dd:cd.
 Finally, we developed a third model which did not include the device identified as 00:0f:a3:39:e1:c0. We made this comparison because
-both of those explicitly mentioned devices were positioned at the same location within the study. We modeled along this process for both
-X- and Y-coordinate location prediction sets.
+both of those explicitly mentioned devices were positioned at the same location within the study. We modeled along this process for
+both X- and Y-coordinate location prediction sets.
 
-As mentioned below, we obtained the lowest measures of error for positions X by setting \texttt{k} to 4 and positions Y by settting
-\texttt{k} to 5. However, this was derived for internal-cross validation. In order to simulate a measure of error that could be expected
-after applying to the data once the system is online (online data set), we applied cross-validation to a holdout data set, comprised of
-25% of the offline data set. For this analysis, we trained the offline data set on 75%. Because there was a holdout of 25%, we applied
-repeated cross-validation to build the models, using 5 folds with each of the 15 repeats to prevent model training information loss.
-
-```{r, Hold-Out Testing for Online Error Simulation - Data Prep, results='hide', message=FALSE, include=FALSE, echo=FALSE}
-###########################################
-############# Prepare Offline
-###########################################
-#sapply(offline_pivot, class)
-offline_pivot$time = as.double(offline_pivot$time)
-offline_pivot$posX = as.double(offline_pivot$posX)
-offline_pivot$posY = as.double(offline_pivot$posY)
-offline_pivot$posZ = as.double(offline_pivot$posZ)
-offline_pivot$orientation = as.double(offline_pivot$orientation)
-offline_pivot$type = as.double(offline_pivot$type)
-#sapply(offline_pivot, class)
-
-#offline_pivot = subset(offline_pivot, select = -c(nas))
-
-###########################################
-############# Prepare Online
-###########################################
-#sapply(online_pivot, class)
-online_pivot$time = as.double(online_pivot$time)
-online_pivot$posX = as.double(online_pivot$posX)
-online_pivot$posY = as.double(online_pivot$posY)
-online_pivot$posZ = as.double(online_pivot$posZ)
-online_pivot$orientation = as.double(online_pivot$orientation)
-online_pivot$type = as.double(online_pivot$type)
-#sapply(online_pivot, class)
-
-# 75/25 train/test split:
-offline_train_75 = offline_pivot[1:floor((dim(offline_pivot)[[1]]*0.75)),] #686,213 training samples
-offline_test_25 = offline_pivot[ceiling((dim(offline_pivot)[[1]]*0.75)):dim(offline_pivot)[[1]],] # 228, 738 testing samples
-
-offline_train_subset <- offline_train_75 %>% filter(orientation < 135-4 & orientation < 135+4)
-```
-
-
-```{r, Hold-Out Testing for Online Error Simulation - Model Construct, results='hide', message=FALSE, include=FALSE, echo=FALSE}
-
-                                                        #XXXXXXXXXXXXXXXXXXX#
-                                                        #XXXXXXXXXXXXXXXXXXX#
-                                                        #  Building for X   #
-                                                        #XXXXXXXXXXXXXXXXXXX#
-                                                        #XXXXXXXXXXXXXXXXXXX#
-
-trainContrl <- trainControl(method="repeatedcv", repeats = 15, number = 5)
-#knn.grid <- expand.grid(k = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15))
-knn.grid <- expand.grid(k = seq(1:15))
-
-knn_fit.posX.allMAC <- train(posX ~ .
-                             , data=subset(offline_train_subset, select = -c(time, posY, posZ, type))
-                             , method = "knn"
-                             , trControl=trainContrl
-                             , metric = "RMSE"
-                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
-                             )
-
-
-########## End of using all MACs
-
-knn_fit.posX.c0MAC <- train(posX ~ .
-                             , data=subset(offline_train_subset, select = -c(time, posY, posZ, `00:0f:a3:39:dd:cd`))
-                             , method = "knn"
-                             , trControl=trainContrl
-                             , metric = "RMSE"
-                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
-                             )
-
-########## End of using MAC c0
-
-knn_fit.posX.cdMAC <- train(posX ~ .
-                             , data=subset(offline_train_subset, select = -c(time, posY, posZ,`00:0f:a3:39:e1:c0`))
-                             , method = "knn"
-                             , trControl=trainContrl
-                             , metric = "RMSE"
-                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
-                             )
-                             
-########## End of using MAC cd
-
-
-                                                        #YYYYYYYYYYYYYYYYYYY#
-                                                        #YYYYYYYYYYYYYYYYYYY#
-                                                        #  Building for Y   #
-                                                        #YYYYYYYYYYYYYYYYYYY#
-                                                        #YYYYYYYYYYYYYYYYYYY#
-
-knn_fit.posY.allMAC <- train(posY ~ .
-                             , data=subset(offline_train_subset, select = -c(time, posX, posZ, type))
-                             , method = "knn"
-                             , trControl=trainContrl
-                             , metric = "RMSE"
-                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
-                             )
-
-########## End of using all MACs
-
-knn_fit.posY.c0MAC <- train(posY ~ .
-                             , data=subset(offline_train_subset, select = -c(time, posX, posZ, `00:0f:a3:39:dd:cd`))
-                             , method = "knn"
-                             , trControl=trainContrl
-                             , metric = "RMSE"
-                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
-                             )
-
-########## End of using MAC c0
-
-knn_fit.posY.cdMAC <- train(posY ~ .
-                             , data=subset(offline_train_subset, select = -c(time, posX, posZ,`00:0f:a3:39:e1:c0`))
-                             , method = "knn"
-                             , trControl=trainContrl
-                             , metric = "RMSE"
-                             , tuneGrid = knn.grid # instead of tuneLength = 5 different values of k
-                             )
-                             
-########## End of using MAC cd
-```
-
-
-```{r, Hold-Out Testing for Online Error Simulation - Preds and RMSE, results='hide', message=FALSE, include=FALSE, echo=FALSE}
-X_preds.allMAC <- predict(knn_fit.posX.allMAC, newdata = subset(offline_test, select = -c(time, posY, posZ)))
-Y_preds.allMAC <- predict(knn_fit.posY.allMAC, newdata = subset(offline_test, select = -c(time, posX, posZ)))
-
-X_res = data.frame(X_preds.allMAC, offline_test$posX)
-Y_res = data.frame(Y_preds.allMAC, offline_test$posY)
-names(X_res) <- c('preds','actuals')
-names(Y_res) <- c('preds','actuals')
-X_res$residuals = X_res$preds - X_res$actuals
-Y_res$residuals = Y_res$preds - Y_res$actuals
-
-X_RSS <- c(crossprod(X_res$residuals))
-X_MSE <- X_RSS / length(X_res$residuals)
-X_RMSE <- sqrt(X_MSE)
-
-Y_RSS <- c(crossprod(Y_res$residuals))
-Y_MSE <- Y_RSS / length(Y_res$residuals)
-Y_RMSE <- sqrt(Y_MSE)
-
-comboRMSE <- sqrt(X_MSE + Y_MSE)
-comboRMSE
-```
-The estimated Root Mean Square Error for the ensemble model applied to the online data set is roughly 7.638. We derived this value by
-taking the mean squared error for the residual values on the holdout sets for both the predicted X positions and predicted Y positions.
-The model estimating positions Y outperformed the model estimated positions X by RMSE of 1.823 to 7.418, respectively.
-
-| Positional Predictions           | Root Mean Squared Error | 
-|----------------------------------|-------------------------|
-| Predicted X                      | 7.418                   |
-| Predicted Y                      | 1.823                   |
-| Online X-Y Ensemble Predictions  | 7.638                   |
+In order to simulate a measure of error that could be expected after applying to the data once the system is online (online data set), we applied cross-validation to a holdout data set, comprised of 25% of the offline data set. For this analysis, we trained the offline
+data set on 75%.
 
 
 
-```{r, echo=FALSE}
-
+```{r, very very important chunk of learning, echo=FALSE}
 offline_subset <- select(offline_pivot, c("posX", "posY", 'posXY', "angle",
                                     "00:14:bf:b1:97:8a", "00:14:bf:b1:97:90", "00:0f:a3:39:e1:c0",
                                     "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81", "00:14:bf:3b:c7:c6",
                                     "00:0f:a3:39:dd:cd"))
 
-offline_subset <- offline_subset %>% filter(angle > 135 - 4 & angle < 135 + 4)
+offline_train_75 = offline_subset[1:floor((dim(offline_subset)[[1]]*0.75)),] #686,213 training samples
+offline_test_25 = offline_subset[ceiling((dim(offline_subset)[[1]]*0.75)):dim(offline_subset)[[1]],] # 228, 738 testing samples
+
+offline_train_subset <- offline_train_75 %>% filter(angle < 135-4 & angle < 135+4)
+
+#offline_subset <- offline_subset %>% filter(angle > 135 - 4 & angle < 135 + 4)
 
 
 knn.grid <- expand.grid(k = seq(1:15))
@@ -322,7 +186,7 @@ train.control <- trainControl(method = 'cv', number = 5)
 # fit a model for posX with AP c0
 model.c0.x <- train(
    posX ~ . ,
-   data = offline_subset %>% select(-c("posY","posXY", "00:0f:a3:39:dd:cd")),
+   data = offline_train_75 %>% select(-c("posY","posXY", "00:0f:a3:39:dd:cd")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -331,7 +195,7 @@ model.c0.x <- train(
 # fit a model for posY with AP c0
 model.c0.y <- train(
    posY ~ . ,
-   data = offline_subset %>% select(-c("posX","posXY", "00:0f:a3:39:dd:cd")),
+   data = offline_train_75 %>% select(-c("posX","posXY", "00:0f:a3:39:dd:cd")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -340,7 +204,7 @@ model.c0.y <- train(
 # fit a model for posX with AP cd
 model.cd.x <- train(
    posX ~ . ,
-   data = offline_subset %>% select(-c("posY","posXY", "00:0f:a3:39:e1:c0")),
+   data = offline_train_75 %>% select(-c("posY","posXY", "00:0f:a3:39:e1:c0")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -349,7 +213,7 @@ model.cd.x <- train(
 # fit a model for posY with AP cd
 model.cd.y <- train(
    posY ~ . ,
-   data = offline_subset %>% select(-c("posX","posXY", "00:0f:a3:39:e1:c0")),
+   data = offline_train_75 %>% select(-c("posX","posXY", "00:0f:a3:39:e1:c0")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -358,7 +222,7 @@ model.cd.y <- train(
 # fit a model for posX with all APs
 model.all.x <- train(
    posX ~ . ,
-   data = offline_subset %>% select(-c("posY","posXY")),
+   data = offline_train_75 %>% select(-c("posY","posXY")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -367,7 +231,7 @@ model.all.x <- train(
 # fit a model for posY with all APs
 model.all.y <- train(
    posY ~ . ,
-   data = offline_subset %>% select(-c("posX","posXY")),
+   data = offline_train_75 %>% select(-c("posX","posXY")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -384,12 +248,54 @@ errors <- data.frame(
                  model.cd.y$results$RMSE^2 + model.cd.x$results$RMSE^2)
 )
 
+
+```
+
+
+```{r, Hold-Out Testing for Online Error Simulation - Preds and RMSE, results='hide', message=FALSE, include=FALSE, echo=FALSE}
+X_preds.allMAC <- predict(model.all.x, newdata = subset(offline_test_25, select = -c(`posY`, `posXY`)))
+Y_preds.allMAC <- predict(model.all.y, newdata = subset(offline_test_25, select = -c(`posX`, `posXY`)))
+
+X_res = data.frame(X_preds.allMAC, offline_test_25$posX)
+Y_res = data.frame(Y_preds.allMAC, offline_test_25$posY)
+names(X_res) <- c('preds','actuals')
+names(Y_res) <- c('preds','actuals')
+X_res$residuals = X_res$preds - X_res$actuals
+Y_res$residuals = Y_res$preds - Y_res$actuals
+
+X_RSS <- c(crossprod(X_res$residuals))
+X_MSE <- X_RSS / length(X_res$residuals)
+X_RMSE <- sqrt(X_MSE)
+
+Y_RSS <- c(crossprod(Y_res$residuals))
+Y_MSE <- Y_RSS / length(Y_res$residuals)
+Y_RMSE <- sqrt(Y_MSE)
+
+comboRMSE <- sqrt(X_MSE + Y_MSE)
 ```
 
 # Results
 
 As shown in Fig. 1, we found that \texttt{k} of 4 or 5 minimized the RMSE of all three models.
 Based the CV results, 4 was chosen as the value of \texttt{k} for the \texttt{k}-NN model.
+
+**What about using them both?**
+
+
+* There are 2 macIDs located at the same position.  
+* Does one give better performance than the other?
+* (00:0f:a3:39:e1:c0, 00:0f:a3:39:dd:cd)
+
+
+Use c0, then use cd, than use cd and c0
+
+### Internal Cross-Validation Model Performance
+
+| AP Feature Set         | Root Mean Squared Error: Y  | Root Mean Squared Error: X  | 
+|------------------------|-----------------------------|-----------------------------|
+| Excluding \texttt{00:0f:a3:39:dd:cd}  | 1.632                 | 1.783
+| Excluding \texttt{00:0f:a3:39:e1:c0}  | 1.634                 | 1.714
+| All APs                | 1.622                 | 1.615
 
 ```{r, echo=FALSE}
 errors %>%
@@ -411,34 +317,33 @@ errors %>%
 ```
 
 
-**What about using them both?**
 
+### Simulated Online Model Error
+The estimated Root Mean Square Error for the ensemble model applied to the online data set is roughly 7.638. We derived this value by
+taking the mean squared error for the residual values on the holdout sets for both the predicted X positions and predicted Y positions.
+The model estimating positions Y outperformed the model estimated positions X by RMSE of 1.823 to 7.418, respectively.
 
-* There are 2 macIDs located at the same position.  
-* Does one give better performance than the other?
-* (00:0f:a3:39:e1:c0, 00:0f:a3:39:dd:cd)
+| Positional Predictions           | Root Mean Squared Error | 
+|----------------------------------|-------------------------|
+| Predicted X                      | 6.503                   |
+| Predicted Y                      | 2.230                   |
+| Online X-Y Ensemble Predictions  | 6.687                   |
 
-
-Use c0, then use cd, than use cd and c0
-
-a plot with all three models
-
-| AP Feature Set         | Mean Squared Error | 
-|------------------------|--------------------|
-| Excluding \texttt{00:0f:a3:39:dd:cd}  | XX                 |
-| Excluding \texttt{00:0f:a3:39:e1:c0}  | XX                 |
-| All APs                | XX                 |
-
-
-
-
+# Here you have full model X to predict on pivots' full model Y to predict together on the online pivot.
+```{r, echo=False}
+preds_x<- predict(knn_fit.posX.allMAC, online_pivot[,c(7:13)])
+preds_y<- predict(knn_fit.posY.allMAC, online_pivot[,c(7:13)])
+plot(preds_y, preds_x, title= 'Predicted Locations vs. Actual Locations')
+points(online_pivot[,3], online_pivot[,2], col = 'red')
+legend(legend = c('Predicted Locations', 'Actual Locations'), col = c('black', 'red'))
+```
 
 
 # Conclusion
 
 (What is the drawback (if any of using this method to real-time locate an object)?)
 
-KNN is slow. calculation scales as n^2/2. Considers the whole dataset.
+KNN is slow as North Korea's missile development program. calculation scales as n^2/2. Considers the whole dataset.
 
 Describe a method that may be an improvement based on your perceived drawbacks.
 
