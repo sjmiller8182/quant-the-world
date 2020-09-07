@@ -476,8 +476,8 @@ data.frame(
   theme(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5)
-  ) + scale_color_manual(values=c("blue4", "coral2"))
-#tinytex::tlmgr_update()
+  ) + scale_color_manual(values=c("blue4", "coral2")
+)
 
 ```
 
@@ -633,6 +633,269 @@ offline$posXY <- paste(offline$posX, offline$posY, sep = '-')
 online$posXY <- paste(online$posX, online$posY, sep = '-')
 
 
+# pivot the dataset to have mac addresses as features
+# and RSSI values as their features
+offline_pivot <- offline %>% 
+   tidyr::pivot_wider(names_from = mac,
+               values_from = 'signal',
+               values_fn = list(signal=mean))
+# impute any NAs with -100
+offline_pivot[is.na(offline_pivot)] <- -100
+
+# pivot the dataset to have mac addresses as features
+# and RSSI values as their features
+online_pivot <- online %>% 
+   tidyr::pivot_wider(names_from = mac,
+               values_from = 'signal',
+               values_fn = list(signal=mean))
+# impute any NAs with -100
+online_pivot[is.na(online_pivot)] <- -100
+
+# subset to the features of interest
+offline_subset <- select(offline_pivot, c("posX", "posY", 'posXY', "angle",
+                                    "00:14:bf:b1:97:8a", "00:14:bf:b1:97:90", "00:0f:a3:39:e1:c0",
+                                    "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81", "00:14:bf:3b:c7:c6",
+                                    "00:0f:a3:39:dd:cd"))
+
+# shuffle the dataset before training.
+rows <- sample(nrow(offline_subset))
+offline_shuffed_subset <- offline_subset[rows,]
+
+# split out a 25% holdout set.
+offline_train_75 = offline_shuffed_subset[1:floor((dim(offline_shuffed_subset)[[1]]*0.75)),] #686,213 training samples
+offline_test_25 = offline_shuffed_subset[ceiling((dim(offline_shuffed_subset)[[1]]*0.75)):dim(offline_shuffed_subset)[[1]],] # 228, 738 testing samples
+
+
+offline_train_subset <- offline_train_75 %>% filter(angle < 135-2 & angle < 135+2)
+offline_test_subset <- offline_test_25 %>% filter(angle < 135-2 & angle < 135+2)
+
+# create a tuning grid for k: 1 through 15
+knn.grid <- expand.grid(k = seq(1:15))
+
+# create a train controller for 5-fold cv
+train.control <- trainControl(method = 'cv', number = 5)
+
+# fit a model for posX with AP c0
+model.c0.x <- train(
+   posX ~ . ,
+   data = offline_train_subset %>% select(-c("posY","posXY", "00:0f:a3:39:dd:cd")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posY with AP c0
+model.c0.y <- train(
+   posY ~ . ,
+   data = offline_train_subset %>% select(-c("posX","posXY", "00:0f:a3:39:dd:cd")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posX with AP cd
+model.cd.x <- train(
+   posX ~ . ,
+   data = offline_train_subset %>% select(-c("posY","posXY", "00:0f:a3:39:e1:c0")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posY with AP cd
+model.cd.y <- train(
+   posY ~ . ,
+   data = offline_train_subset %>% select(-c("posX","posXY", "00:0f:a3:39:e1:c0")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posX with all APs
+model.all.x <- train(
+   posX ~ . ,
+   data = offline_train_subset %>% select(-c("posY","posXY")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# fit a model for posY with all APs
+model.all.y <- train(
+   posY ~ . ,
+   data = offline_train_subset %>% select(-c("posX","posXY")),
+   method = 'knn',
+   trControl = train.control,
+   tuneGrid = knn.grid
+)
+
+# predict on holdout set
+X_preds.allMAC <- predict(model.all.x, newdata = subset(offline_test_subset, select = -c(`posY`, `posXY`)))
+Y_preds.allMAC <- predict(model.all.y, newdata = subset(offline_test_subset, select = -c(`posX`, `posXY`)))
+
+# create data frame of predictions and actuals for comparison
+X_res = data.frame(X_preds.allMAC, offline_test_subset$posX)
+Y_res = data.frame(Y_preds.allMAC, offline_test_subset$posY)
+names(X_res) <- c('preds','actuals')
+names(Y_res) <- c('preds','actuals')
+X_res$residuals = X_res$preds - X_res$actuals
+Y_res$residuals = Y_res$preds - Y_res$actuals
+
+# calculate X error
+X_RSS <- c(crossprod(X_res$residuals))
+X_MSE <- X_RSS / length(X_res$residuals)
+X_RMSE <- sqrt(X_MSE)
+
+# calculate Y error
+Y_RSS <- c(crossprod(Y_res$residuals))
+Y_MSE <- Y_RSS / length(Y_res$residuals)
+Y_RMSE <- sqrt(Y_MSE)
+
+# combine error from both models
+comboRMSE <- sqrt(X_MSE + Y_MSE)
+
+# predict on online set
+preds_x<- predict(model.all.x, online_pivot[,c(6,8:14)])
+preds_y<- predict(model.all.y, online_pivot[,c(6,8:14)])
+
+# create data frame of predictions and actuals for comparison
+X_res = data.frame(preds_x, online_pivot$posX)
+Y_res = data.frame(preds_y, online_pivot$posY)
+names(X_res) <- c('preds','actuals')
+names(Y_res) <- c('preds','actuals')
+X_res$residuals = X_res$preds - X_res$actuals
+Y_res$residuals = Y_res$preds - Y_res$actuals
+
+# calculate X error
+X_RSS <- c(crossprod(X_res$residuals))
+X_MSE <- X_RSS / length(X_res$residuals)
+X_RMSE <- sqrt(X_MSE)
+
+# calculate Y error
+Y_RSS <- c(crossprod(Y_res$residuals))
+Y_MSE <- Y_RSS / length(Y_res$residuals)
+Y_RMSE <- sqrt(Y_MSE)
+
+# combine error from both models
+comboRMSE <- sqrt(X_MSE + Y_MSE)
+
+# create a data frame of the X model errors
+errorsX <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.x$results$k)),
+      rep('AP-c0', length(model.all.x$results$k)),
+      rep('AP-cd', length(model.all.x$results$k))),
+   errorX = c(model.all.x$results$RMSE,
+                 model.c0.x$results$RMSE,
+                 model.cd.x$results$RMSE)
+)
+
+# plot the X model errors
+errorsX %>%
+   ggplot(aes(x = k, y = errorX, color = model)) +
+   geom_line() + 
+   xlab('k Neighbors') +
+   ylab('RMSE') +
+   ggtitle('RMSE of Position X Models with 5-Fold CV over k') +
+   labs(caption = paste(
+      'Figure 1:\n',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15. This includes position X values only.', sep='')
+      ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+  
+# create a data frame of the X model errors
+errorsY <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.y$results$k)),
+      rep('AP-c0', length(model.all.y$results$k)),
+      rep('AP-cd', length(model.all.y$results$k))),
+   errorY = c(model.all.y$results$RMSE,
+                 model.c0.y$results$RMSE,
+                 model.cd.y$results$RMSE)
+)
+
+# plot the Y model errors
+errorsY %>%
+   ggplot(aes(x = k, y = errorY, color = model)) +
+   geom_line() + 
+   xlab('k Neighbors') +
+   ylab('RMSE') +
+   ggtitle('RMSE of Position Y Models with 5-Fold CV over k') +
+   labs(caption = paste(
+      'Figure 2:\n',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15. This includes position Y values only.', sep='')
+      ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+
+# create a data frame of the error for both models
+errorsALL <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.y$results$k)),
+      rep('AP-c0', length(model.all.y$results$k)),
+      rep('AP-cd', length(model.all.y$results$k))),
+   errorALL = c(model.all.y$results$RMSE + model.all.x$results$RMSE,
+                 model.c0.y$results$RMSE + model.c0.x$results$RMSE,
+                 model.cd.y$results$RMSE + model.cd.x$results$RMSE)
+)
+
+# plot the errors for both models
+errorsALL %>%
+   ggplot(aes(x = k, y = errorALL, color = model)) +
+   geom_line() + 
+   xlab('k Neighbors') +
+   ylab('RMSE') +
+   ggtitle('RMSE of Models of both Positions (X,Y) with 5-Fold CV over k') +
+   labs(caption = paste(
+      'Figure 3:\n',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15.', sep='')
+      ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+
+# predict positions from model
+preds_x<- predict(model.all.x, online_pivot[,c(6,8:14)])
+preds_y<- predict(model.all.y, online_pivot[,c(6,8:14)])
+
+# graph the position predictions vs the actual positions
+data.frame(
+  x=c(preds_x, online_pivot$posX),
+  y=c(preds_y, online_pivot$posY),
+  group=c(rep('Prediction', length(preds_y)), rep('Actual', length(online_pivot$posY)))
+) %>%
+  ggplot(aes(x=x, y=y, color = group)) + geom_point(aes(shape=group)) +
+   ggtitle('K-Nearest Neighbors: Predictions & Actuals') +
+  ylab("Position Y") +
+  xlab("Position X") +
+   labs(caption = paste(
+      'Figure 4:',
+      'Positions of predicted X-Y values (blue) and actual values (red)')
+      ) +
+  theme_minimal() +
+  theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0.5)
+  ) + scale_color_manual(values=c("blue4", "coral2")
+)
 
 ```
 
