@@ -151,9 +151,6 @@ O\left(n\right) \sim \frac{n^2}{2}
 
 ## Model Validation
 
-(Describe how you estimated your error and found the best fit ASSUMING you CANNOT USE THE ONLINE DATA.)
-
-kold cross validation 
 Predicting the real-time X- and Y-coordinate positions using K-Nearest Neighbors required the constructing an ensemble model. The first
 model we built contained all devices. The second model we built included all but the device excluding MAC address 00:0f:a3:39:dd:cd.
 Finally, we developed a third model which did not include the device identified as 00:0f:a3:39:e1:c0. We made this comparison because
@@ -275,17 +272,7 @@ of 5 minimized the error for Y. Fig. 3 visualizes the RMSE of the combination of
 Based the CV results, 3 was chosen for the value of \texttt{k} for the position X model and 4 was chosen for
 the value of \texttt{k} for the position Y model.
 
-**What about using them both?**
-
-
-* There are 2 macIDs located at the same position.  
-* Does one give better performance than the other?
-* (00:0f:a3:39:e1:c0, 00:0f:a3:39:dd:cd)
-
-
-Use c0, then use cd, than use cd and c0
-
-### Internal Cross-Validation Model Performance
+**Internal Cross-Validation Model Performance**
 
 | AP Feature Set         | Root Mean Squared Error: Y  | Root Mean Squared Error: X  | 
 |------------------------|-----------------------------|-----------------------------|
@@ -293,7 +280,7 @@ Use c0, then use cd, than use cd and c0
 | Excluding \texttt{00:0f:a3:39:e1:c0}  | 1.634                 | 1.714
 | All APs                | 1.622                 | 1.615
 
-
+\newpage
 ```{r RMSE X Plots, echo=FALSE}
 errorsX <- data.frame(
    k = rep(model.all.y$results$k, 3),
@@ -412,10 +399,11 @@ RMSE of 1.823 to 7.418, respectively.
 # Conclusion
 
 KNN is a slow-learning algorithm because it computes distance across the entire data set every time it is executed, as
-noted earlier. Calculation scales as n^2/2. Using the data we trained our models on, the results were not very stable.
-Furthermore, calculation time is not practical for a real-time location as the overhead time consumption for computation
-is too great. Visualized in the plot of actuals and predicted values in Fig. 4, below, there are extreme outliers beyond
-the boundaries of the building walls. The high volume of extreme values is not practical.
+noted earlier. The calculation scales as shown in (\ref{eqn:knncomplexity}). Using the data we trained our models on,
+the results were not very stable. Furthermore, calculation time is not practical for a real-time location as the overhead
+time consumption for computation is too great. Visualized in the plot of actuals and predicted values in Fig. 4, below,
+there are extreme outliers beyond the boundaries of the building walls. The high volume of extreme values is not
+practical.
 
 ```{r GGPLOT for PREDS, echo=FALSE}
 preds_x<- predict(model.all.x, online_pivot[,c(6,8:14)])
@@ -439,12 +427,13 @@ data.frame(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5)
   ) + scale_color_manual(values=c("blue4", "coral2"))
-
+tinytex::tlmgr_update()
 
 ```
 
 Given that electromagnetic signal strength decreases by $1/r^2$, per unit distance, polynomial regression may be a highly
-suited alternative to the K-Nearest Neighbors model used. Polynomial regression has a much smaller time complexity than K-NNsince it does not have to re-evaluate the entire data set with each added observation.
+suited alternative to the K-Nearest Neighbors model used. Polynomial regression has a much smaller time complexity than
+ K-NNsince it does not have to re-evaluate the entire data set with each added observation.
 
 The following assumptions would need to be met for a regression approach to be efficable:
 
