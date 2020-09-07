@@ -37,7 +37,7 @@ p_load(tidyverse, caret, dplyr, magrittr, knitr, tidyr)
 #library(magrittr)
 #library(knitr)
 #library(tidyr)
-#setwd('C:/Users/Pablo/Desktop/qtw-repo_2/case_study_1')
+setwd('C:/Users/Pablo/Desktop/qtw-repo_2/case_study_1')
 source('./functions.R')
 
 # set a random seed for repodicibility
@@ -166,15 +166,20 @@ data set on 75%.
 
 
 ```{r, very very important chunk of learning, echo=FALSE}
+
 offline_subset <- select(offline_pivot, c("posX", "posY", 'posXY', "angle",
                                     "00:14:bf:b1:97:8a", "00:14:bf:b1:97:90", "00:0f:a3:39:e1:c0",
                                     "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81", "00:14:bf:3b:c7:c6",
                                     "00:0f:a3:39:dd:cd"))
 
-offline_train_75 = offline_subset[1:floor((dim(offline_subset)[[1]]*0.75)),] #686,213 training samples
-offline_test_25 = offline_subset[ceiling((dim(offline_subset)[[1]]*0.75)):dim(offline_subset)[[1]],] # 228, 738 testing samples
+rows <- sample(nrow(offline_subset))
+offline_shuffed_subset <- offline_subset[rows,]
+
+offline_train_75 = offline_shuffed_subset[1:floor((dim(offline_shuffed_subset)[[1]]*0.75)),] #686,213 training samples
+offline_test_25 = offline_shuffed_subset[ceiling((dim(offline_shuffed_subset)[[1]]*0.75)):dim(offline_shuffed_subset)[[1]],] # 228, 738 testing samples
 
 offline_train_subset <- offline_train_75 %>% filter(angle < 135-4 & angle < 135+4)
+offline_test_subset <- offline_test_25 %>% filter(angle < 135-4 & angle < 135+4)
 
 #offline_subset <- offline_subset %>% filter(angle > 135 - 4 & angle < 135 + 4)
 
@@ -186,7 +191,7 @@ train.control <- trainControl(method = 'cv', number = 5)
 # fit a model for posX with AP c0
 model.c0.x <- train(
    posX ~ . ,
-   data = offline_train_75 %>% select(-c("posY","posXY", "00:0f:a3:39:dd:cd")),
+   data = offline_train_subset %>% select(-c("posY","posXY", "00:0f:a3:39:dd:cd")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -195,7 +200,7 @@ model.c0.x <- train(
 # fit a model for posY with AP c0
 model.c0.y <- train(
    posY ~ . ,
-   data = offline_train_75 %>% select(-c("posX","posXY", "00:0f:a3:39:dd:cd")),
+   data = offline_train_subset %>% select(-c("posX","posXY", "00:0f:a3:39:dd:cd")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -204,7 +209,7 @@ model.c0.y <- train(
 # fit a model for posX with AP cd
 model.cd.x <- train(
    posX ~ . ,
-   data = offline_train_75 %>% select(-c("posY","posXY", "00:0f:a3:39:e1:c0")),
+   data = offline_train_subset %>% select(-c("posY","posXY", "00:0f:a3:39:e1:c0")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -213,7 +218,7 @@ model.cd.x <- train(
 # fit a model for posY with AP cd
 model.cd.y <- train(
    posY ~ . ,
-   data = offline_train_75 %>% select(-c("posX","posXY", "00:0f:a3:39:e1:c0")),
+   data = offline_train_subset %>% select(-c("posX","posXY", "00:0f:a3:39:e1:c0")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -222,7 +227,7 @@ model.cd.y <- train(
 # fit a model for posX with all APs
 model.all.x <- train(
    posX ~ . ,
-   data = offline_train_75 %>% select(-c("posY","posXY")),
+   data = offline_train_subset %>% select(-c("posY","posXY")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
@@ -231,21 +236,10 @@ model.all.x <- train(
 # fit a model for posY with all APs
 model.all.y <- train(
    posY ~ . ,
-   data = offline_train_75 %>% select(-c("posX","posXY")),
+   data = offline_train_subset %>% select(-c("posX","posXY")),
    method = 'knn',
    trControl = train.control,
    tuneGrid = knn.grid
-)
-
-errors <- data.frame(
-   k = rep(model.all.y$results$k, 3),
-   model = c(
-      rep('All APs', length(model.all.y$results$k)),
-      rep('AP-c0', length(model.all.y$results$k)),
-      rep('AP-cd', length(model.all.y$results$k))),
-   error = c(model.all.y$results$RMSE^2 + model.all.x$results$RMSE^2,
-                 model.c0.y$results$RMSE^2 + model.c0.x$results$RMSE^2,
-                 model.cd.y$results$RMSE^2 + model.cd.x$results$RMSE^2)
 )
 
 
@@ -253,11 +247,11 @@ errors <- data.frame(
 
 
 ```{r, Hold-Out Testing for Online Error Simulation - Preds and RMSE, results='hide', message=FALSE, include=FALSE, echo=FALSE}
-X_preds.allMAC <- predict(model.all.x, newdata = subset(offline_test_25, select = -c(`posY`, `posXY`)))
-Y_preds.allMAC <- predict(model.all.y, newdata = subset(offline_test_25, select = -c(`posX`, `posXY`)))
+X_preds.allMAC <- predict(model.all.x, newdata = subset(offline_test_subset, select = -c(`posY`, `posXY`)))
+Y_preds.allMAC <- predict(model.all.y, newdata = subset(offline_test_subset, select = -c(`posX`, `posXY`)))
 
-X_res = data.frame(X_preds.allMAC, offline_test_25$posX)
-Y_res = data.frame(Y_preds.allMAC, offline_test_25$posY)
+X_res = data.frame(X_preds.allMAC, offline_test_subset$posX)
+Y_res = data.frame(Y_preds.allMAC, offline_test_subset$posY)
 names(X_res) <- c('preds','actuals')
 names(Y_res) <- c('preds','actuals')
 X_res$residuals = X_res$preds - X_res$actuals
@@ -276,8 +270,10 @@ comboRMSE <- sqrt(X_MSE + Y_MSE)
 
 # Results
 
-As shown in Fig. 1, we found that \texttt{k} of 4 or 5 minimized the RMSE of all three models.
-Based the CV results, 4 was chosen as the value of \texttt{k} for the \texttt{k}-NN model.
+As shown in Fig. 1 and Fig. 2, we found found that \texttt{k} of 4 minimized the error for X and \texttt{k}
+of 5 minimized the error for Y. Fig. 3 visualizes the RMSE of the combination of X and Y models.
+Based the CV results, 3 was chosen for the value of \texttt{k} for the position X model and 4 was chosen for
+the value of \texttt{k} for the position Y model.
 
 **What about using them both?**
 
@@ -297,63 +293,164 @@ Use c0, then use cd, than use cd and c0
 | Excluding \texttt{00:0f:a3:39:e1:c0}  | 1.634                 | 1.714
 | All APs                | 1.622                 | 1.615
 
-```{r, echo=FALSE}
-errors %>%
-   ggplot(aes(x = k, y = error, color = model)) +
+
+```{r RMSE X Plots, echo=FALSE}
+errorsX <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.x$results$k)),
+      rep('AP-c0', length(model.all.x$results$k)),
+      rep('AP-cd', length(model.all.x$results$k))),
+   errorX = c(model.all.x$results$RMSE,
+                 model.c0.x$results$RMSE,
+                 model.cd.x$results$RMSE)
+)
+
+errorsX %>%
+   ggplot(aes(x = k, y = errorX, color = model)) +
    geom_line() + 
    xlab('k Neighbors') +
    ylab('RMSE') +
-   ggtitle('RMSE of Models with 5-fold CV Over k') +
+   ggtitle('RMSE of Position X Models with 5-Fold CV over k') +
    labs(caption = paste(
-      'Figure 1:',
-      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),',
-      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),\n',
-      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd) for k values 1 through 15.')
+      'Figure 1:\n',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15. This includes position X values only.', sep='')
       ) +
+  theme_minimal() +
    theme(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0)
   )
+
+```
+
+```{r RMSE Y Plots, echo=FALSE}
+errorsY <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.y$results$k)),
+      rep('AP-c0', length(model.all.y$results$k)),
+      rep('AP-cd', length(model.all.y$results$k))),
+   errorY = c(model.all.y$results$RMSE,
+                 model.c0.y$results$RMSE,
+                 model.cd.y$results$RMSE)
+)
+
+errorsY %>%
+   ggplot(aes(x = k, y = errorY, color = model)) +
+   geom_line() + 
+   xlab('k Neighbors') +
+   ylab('RMSE') +
+   ggtitle('RMSE of Position Y Models with 5-Fold CV over k') +
+   labs(caption = paste(
+      'Figure 1:\n',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15. This includes position Y values only.', sep='')
+      ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+
+```
+
+
+
+
+
+```{r RMSE All Plots, echo=FALSE}
+errorsALL <- data.frame(
+   k = rep(model.all.y$results$k, 3),
+   model = c(
+      rep('All APs', length(model.all.y$results$k)),
+      rep('AP-c0', length(model.all.y$results$k)),
+      rep('AP-cd', length(model.all.y$results$k))),
+   errorALL = c(model.all.y$results$RMSE + model.all.x$results$RMSE,
+                 model.c0.y$results$RMSE + model.c0.x$results$RMSE,
+                 model.cd.y$results$RMSE + model.cd.x$results$RMSE)
+)
+
+errorsALL %>%
+   ggplot(aes(x = k, y = errorALL, color = model)) +
+   geom_line() + 
+   xlab('k Neighbors') +
+   ylab('RMSE') +
+   ggtitle('RMSE of Models of both Positions (X,Y) with 5-Fold CV over k') +
+   labs(caption = paste(
+      'Figure 1:\n',
+      'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
+      'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
+      'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15.', sep='')
+      ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+
 ```
 
 
 
 ### Simulated Online Model Error
-The estimated Root Mean Square Error for the ensemble model applied to the online data set is roughly 7.638. We derived this value by
-taking the mean squared error for the residual values on the holdout sets for both the predicted X positions and predicted Y positions.
-The model estimating positions Y outperformed the model estimated positions X by RMSE of 1.823 to 7.418, respectively.
+The estimated Root Mean Square Error for the ensemble model applied to the online data set is roughly 7.638. We derived
+this value by taking the mean squared error for the residual values on the holdout sets for both the predicted X
+positions and predicted Y positions. The model estimating positions Y outperformed the model estimated positions X by
+RMSE of 1.823 to 7.418, respectively.
 
 | Positional Predictions           | Root Mean Squared Error | 
 |----------------------------------|-------------------------|
-| Predicted X                      | 6.503                   |
-| Predicted Y                      | 2.230                   |
-| Online X-Y Ensemble Predictions  | 6.687                   |
-
-# Here you have full model X to predict on pivots' full model Y to predict together on the online pivot.
-```{r, echo=False}
-preds_x<- predict(knn_fit.posX.allMAC, online_pivot[,c(7:13)])
-preds_y<- predict(knn_fit.posY.allMAC, online_pivot[,c(7:13)])
-plot(preds_y, preds_x, title= 'Predicted Locations vs. Actual Locations')
-points(online_pivot[,3], online_pivot[,2], col = 'red')
-legend(legend = c('Predicted Locations', 'Actual Locations'), col = c('black', 'red'))
-```
+| Predicted X                      | 6.732                   |
+| Predicted Y                      | 2.067                   |
+| Online X-Y Ensemble Predictions  | 7.042                   |
 
 
 # Conclusion
 
-(What is the drawback (if any of using this method to real-time locate an object)?)
+KNN is a slow-learning algorithm because it computes distance across the entire data set every time it is executed, as
+noted earlier. Calculation scales as n^2/2. Using the data we trained our models on, the results were not very stable.
+Furthermore, calculation time is not practical for a real-time location as the overhead time consumption for computation
+is too great. Visualized in the plot of actuals and predicted values in Fig. 4, below, there are extreme outliers beyond
+the boundaries of the building walls. The high volume of extreme values is not practical.
 
-KNN is slow as North Korea's missile development program. calculation scales as n^2/2. Considers the whole dataset.
+```{r GGPLOT for PREDS, echo=FALSE}
+preds_x<- predict(model.all.x, online_pivot[,c(6,8:14)])
+preds_y<- predict(model.all.y, online_pivot[,c(6,8:14)])
 
-Describe a method that may be an improvement based on your perceived drawbacks.
+data.frame(
+  x=c(preds_x, online_pivot$posX),
+  y=c(preds_y, online_pivot$posY),
+  group=c(rep('Prediction', length(preds_y)), rep('Actual', length(online_pivot$posY)))
+) %>%
+  ggplot(aes(x=x, y=y, color = group)) + geom_point(aes(shape=group)) +
+   ggtitle('K-Nearest Neighbors: Predictions & Actuals') +
+  ylab("Position Y") +
+  xlab("Position X") +
+   labs(caption = paste(
+      'Figure 4:',
+      'Positions of predicted X-Y values (blue) and actual values (red)')
+      ) +
+  theme_minimal() +
+  theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0.5)
+  ) + scale_color_manual(values=c("blue4", "coral2"))
 
-Linear regression, assuming the assumptions are met
+
+```
+
+Given that electromagnetic signal strength decreases by $1/r^2$, per unit distance, polynomial regression may be a highly
+suited alternative to the K-Nearest Neighbors model used. Polynomial regression has a much smaller time complexity than K-NNsince it does not have to re-evaluate the entire data set with each added observation.
+
+The following assumptions would need to be met for a regression approach to be efficable:
 
 * Variance of the residuals is constant
 * Normally distributed residuals
-* No outlier + leverage points
-
-Given that electromagnetic signals fall off as $1/r^2$, we could potentionally use polynomial regression.
+* No outliers with high leverage
 
 \newpage
 
