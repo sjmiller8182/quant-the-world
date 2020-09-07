@@ -28,16 +28,11 @@ editor_options:
 ---
 
 ```{r, lib-read, results='hide', message=FALSE, include=FALSE, echo=FALSE}
+# in appendix
+
 # libraries
 library(pacman)
 p_load(tidyverse, caret, dplyr, magrittr, knitr, tidyr)
-#library(tidyverse)
-#library(caret)
-#library(dplyr)
-#library(magrittr)
-#library(knitr)
-#library(tidyr)
-setwd('C:/Users/Pablo/Desktop/qtw-repo_2/case_study_1')
 source('./functions.R')
 
 # set a random seed for repodicibility
@@ -109,16 +104,22 @@ Any missing signal values were filled with -100, imputing it as a very low stren
 
  
 ```{r, pivotal chunk, echo=FALSE}
+# pivot the dataset to have mac addresses as features
+# and RSSI values as their features
 offline_pivot <- offline %>% 
    tidyr::pivot_wider(names_from = mac,
                values_from = 'signal',
                values_fn = list(signal=mean))
+# impute any NAs with -100
 offline_pivot[is.na(offline_pivot)] <- -100
 
+# pivot the dataset to have mac addresses as features
+# and RSSI values as their features
 online_pivot <- online %>% 
    tidyr::pivot_wider(names_from = mac,
                values_from = 'signal',
                values_fn = list(signal=mean))
+# impute any NAs with -100
 online_pivot[is.na(online_pivot)] <- -100
 ```
 
@@ -163,26 +164,28 @@ data set on 75%.
 
 
 ```{r, very very important chunk of learning, echo=FALSE}
-
+# subset to the features of interest
 offline_subset <- select(offline_pivot, c("posX", "posY", 'posXY', "angle",
                                     "00:14:bf:b1:97:8a", "00:14:bf:b1:97:90", "00:0f:a3:39:e1:c0",
                                     "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81", "00:14:bf:3b:c7:c6",
                                     "00:0f:a3:39:dd:cd"))
 
+# shuffle the dataset before training.
 rows <- sample(nrow(offline_subset))
 offline_shuffed_subset <- offline_subset[rows,]
 
+# split out a 25% holdout set.
 offline_train_75 = offline_shuffed_subset[1:floor((dim(offline_shuffed_subset)[[1]]*0.75)),] #686,213 training samples
 offline_test_25 = offline_shuffed_subset[ceiling((dim(offline_shuffed_subset)[[1]]*0.75)):dim(offline_shuffed_subset)[[1]],] # 228, 738 testing samples
 
-offline_train_subset <- offline_train_75 %>% filter(angle < 135-4 & angle < 135+4)
-offline_test_subset <- offline_test_25 %>% filter(angle < 135-4 & angle < 135+4)
 
-#offline_subset <- offline_subset %>% filter(angle > 135 - 4 & angle < 135 + 4)
+offline_train_subset <- offline_train_75 %>% filter(angle < 135-2 & angle < 135+2)
+offline_test_subset <- offline_test_25 %>% filter(angle < 135-2 & angle < 135+2)
 
-
+# create a tuning grid for k: 1 through 15
 knn.grid <- expand.grid(k = seq(1:15))
 
+# create a train controller for 5-fold cv
 train.control <- trainControl(method = 'cv', number = 5)
 
 # fit a model for posX with AP c0
@@ -244,9 +247,11 @@ model.all.y <- train(
 
 
 ```{r, Hold-Out Testing for Online Error Simulation - Preds and RMSE, results='hide', message=FALSE, include=FALSE, echo=FALSE}
+# predict on holdout set
 X_preds.allMAC <- predict(model.all.x, newdata = subset(offline_test_subset, select = -c(`posY`, `posXY`)))
 Y_preds.allMAC <- predict(model.all.y, newdata = subset(offline_test_subset, select = -c(`posX`, `posXY`)))
 
+# create data frame of predictions and actuals for comparison
 X_res = data.frame(X_preds.allMAC, offline_test_subset$posX)
 Y_res = data.frame(Y_preds.allMAC, offline_test_subset$posY)
 names(X_res) <- c('preds','actuals')
@@ -254,34 +259,59 @@ names(Y_res) <- c('preds','actuals')
 X_res$residuals = X_res$preds - X_res$actuals
 Y_res$residuals = Y_res$preds - Y_res$actuals
 
+# calculate X error
 X_RSS <- c(crossprod(X_res$residuals))
 X_MSE <- X_RSS / length(X_res$residuals)
 X_RMSE <- sqrt(X_MSE)
 
+# calculate Y error
 Y_RSS <- c(crossprod(Y_res$residuals))
 Y_MSE <- Y_RSS / length(Y_res$residuals)
 Y_RMSE <- sqrt(Y_MSE)
 
+# combine error from both models
+comboRMSE <- sqrt(X_MSE + Y_MSE)
+
+# predict on online set
+preds_x<- predict(model.all.x, online_pivot[,c(6,8:14)])
+preds_y<- predict(model.all.y, online_pivot[,c(6,8:14)])
+
+# create data frame of predictions and actuals for comparison
+X_res = data.frame(preds_x, online_pivot$posX)
+Y_res = data.frame(preds_y, online_pivot$posY)
+names(X_res) <- c('preds','actuals')
+names(Y_res) <- c('preds','actuals')
+X_res$residuals = X_res$preds - X_res$actuals
+Y_res$residuals = Y_res$preds - Y_res$actuals
+
+# calculate X error
+X_RSS <- c(crossprod(X_res$residuals))
+X_MSE <- X_RSS / length(X_res$residuals)
+X_RMSE <- sqrt(X_MSE)
+
+# calculate Y error
+Y_RSS <- c(crossprod(Y_res$residuals))
+Y_MSE <- Y_RSS / length(Y_res$residuals)
+Y_RMSE <- sqrt(Y_MSE)
+
+# combine error from both models
 comboRMSE <- sqrt(X_MSE + Y_MSE)
 ```
 
+\newpage
+
 # Results
 
-As shown in Fig. 1 and Fig. 2, we found found that \texttt{k} of 4 minimized the error for X and \texttt{k}
-of 5 minimized the error for Y. Fig. 3 visualizes the RMSE of the combination of X and Y models.
-Based the CV results, 3 was chosen for the value of \texttt{k} for the position X model and 4 was chosen for
-the value of \texttt{k} for the position Y model.
+Fig. 1 and Fig. 2 show the RMSE of \texttt{k}-NN models for X and Y positions, respectively.
+We found found that \texttt{k} of 5 minimized the error of the position X model
+ and \texttt{k} of 4 minimized the error of the position Y model by cross-validation.
+We also found that using all APs provided the lowest overall error for both X position and Y position prediction.
+From the plots, we can also see that there is more error in the X position than the Y position prediction.
 
-**Internal Cross-Validation Model Performance**
 
-| AP Feature Set         | Root Mean Squared Error: Y  | Root Mean Squared Error: X  | 
-|------------------------|-----------------------------|-----------------------------|
-| Excluding \texttt{00:0f:a3:39:dd:cd}  | 1.632                 | 1.783
-| Excluding \texttt{00:0f:a3:39:e1:c0}  | 1.634                 | 1.714
-| All APs                | 1.622                 | 1.615
 
-\newpage
-```{r RMSE X Plots, echo=FALSE}
+```{r RMSE X Plots, echo=FALSE, fig.height=3.5}
+# create a data frame of the X model errors
 errorsX <- data.frame(
    k = rep(model.all.y$results$k, 3),
    model = c(
@@ -293,6 +323,7 @@ errorsX <- data.frame(
                  model.cd.x$results$RMSE)
 )
 
+# plot the X model errors
 errorsX %>%
    ggplot(aes(x = k, y = errorX, color = model)) +
    geom_line() + 
@@ -313,7 +344,10 @@ errorsX %>%
 
 ```
 
-```{r RMSE Y Plots, echo=FALSE}
+
+
+```{r RMSE Y Plots, echo=FALSE, fig.height=3.5}
+# create a data frame of the X model errors
 errorsY <- data.frame(
    k = rep(model.all.y$results$k, 3),
    model = c(
@@ -325,6 +359,7 @@ errorsY <- data.frame(
                  model.cd.y$results$RMSE)
 )
 
+# plot the Y model errors
 errorsY %>%
    ggplot(aes(x = k, y = errorY, color = model)) +
    geom_line() + 
@@ -332,7 +367,7 @@ errorsY %>%
    ylab('RMSE') +
    ggtitle('RMSE of Position Y Models with 5-Fold CV over k') +
    labs(caption = paste(
-      'Figure 1:\n',
+      'Figure 2:\n',
       'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
       'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
       'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15. This includes position Y values only.', sep='')
@@ -345,11 +380,15 @@ errorsY %>%
 
 ```
 
+\newpage
+
+Fig. 3 visualizes the RMSE of the combination of X and Y models.
+These results are consistent with the results for the individual X and Y position predictions.
+The model using all the APs performs best based on RMSE.
 
 
-
-
-```{r RMSE All Plots, echo=FALSE}
+```{r RMSE All Plots, echo=FALSE, fig.height=3.5}
+# create a data frame of the error for both models
 errorsALL <- data.frame(
    k = rep(model.all.y$results$k, 3),
    model = c(
@@ -361,6 +400,7 @@ errorsALL <- data.frame(
                  model.cd.y$results$RMSE + model.cd.x$results$RMSE)
 )
 
+# plot the errors for both models
 errorsALL %>%
    ggplot(aes(x = k, y = errorALL, color = model)) +
    geom_line() + 
@@ -368,7 +408,7 @@ errorsALL %>%
    ylab('RMSE') +
    ggtitle('RMSE of Models of both Positions (X,Y) with 5-Fold CV over k') +
    labs(caption = paste(
-      'Figure 1:\n',
+      'Figure 3:\n',
       'The mean RMSE of 5-fold cross validation for k-NN models using all APs (All APs),\n',
       'all APs excluding 00:0f:a3:39:dd:cd (AP-c0),',
       'and all APs excluding 00:0f:a3:39:e1:c0 (AP-cd)\nfor k values 1 through 15.', sep='')
@@ -382,33 +422,43 @@ errorsALL %>%
 ```
 
 
+The estimated RMSE for the model of both positions applied to the online data set is roughly 7.042. 
+We derived this value by taking the mean squared error for the residual values on the holdout sets for
+ both the predicted X positions and predicted Y positions. 
+A summary of the results for the holdout dataset is shown in Table 1.
+We see a small inflation of the error for model predictions on the online data.
+A summary of the results for the online dataset is shown in Table 2.
 
-### Simulated Online Model Error
-The estimated Root Mean Square Error for the ensemble model applied to the online data set is roughly 7.638. We derived
-this value by taking the mean squared error for the residual values on the holdout sets for both the predicted X
-positions and predicted Y positions. The model estimating positions Y outperformed the model estimated positions X by
-RMSE of 1.823 to 7.418, respectively.
+
+**Table 1. Simulated Online Model Errors**
 
 | Positional Predictions           | Root Mean Squared Error | 
 |----------------------------------|-------------------------|
-| Predicted X                      | 6.732                   |
-| Predicted Y                      | 2.067                   |
-| Online X-Y Ensemble Predictions  | 7.042                   |
+| Predicted X                      | 2.294                   |
+| Predicted Y                      | 1.521                   |
+| Online X-Y Predictions           | 2.753                   |
 
+**Table 2. Online Model Errors**
 
-# Conclusion
+| Positional Predictions           | Root Mean Squared Error | 
+|----------------------------------|-------------------------|
+| Predicted X                      | 2.948                   |
+| Predicted Y                      | 2.194                   |
+| Online X-Y Predictions           | 3.675                   |
 
-KNN is a slow-learning algorithm because it computes distance across the entire data set every time it is executed, as
-noted earlier. The calculation scales as shown in (\ref{eqn:knncomplexity}). Using the data we trained our models on,
-the results were not very stable. Furthermore, calculation time is not practical for a real-time location as the overhead
-time consumption for computation is too great. Visualized in the plot of actuals and predicted values in Fig. 4, below,
-there are extreme outliers beyond the boundaries of the building walls. The high volume of extreme values is not
-practical.
+\newpage
+
+Fig. 4 shows location prediction (red) and actual positions (black) of measurement in the online dataset.
+There appears to be a large amount of error in the predictions.
+This figure shows that this model is not useful for indoor positioning.
+
 
 ```{r GGPLOT for PREDS, echo=FALSE}
+# predict positions from model
 preds_x<- predict(model.all.x, online_pivot[,c(6,8:14)])
 preds_y<- predict(model.all.y, online_pivot[,c(6,8:14)])
 
+# graph the position predictions vs the actual positions
 data.frame(
   x=c(preds_x, online_pivot$posX),
   y=c(preds_y, online_pivot$posY),
@@ -427,13 +477,29 @@ data.frame(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5)
   ) + scale_color_manual(values=c("blue4", "coral2"))
-tinytex::tlmgr_update()
+#tinytex::tlmgr_update()
 
 ```
 
-Given that electromagnetic signal strength decreases by $1/r^2$, per unit distance, polynomial regression may be a highly
-suited alternative to the K-Nearest Neighbors model used. Polynomial regression has a much smaller time complexity than
- K-NNsince it does not have to re-evaluate the entire data set with each added observation.
+\newpage
+
+# Conclusion
+
+Modeling position with \texttt{k}-NN based on RSSI signal strength does not appear to yield useful results.
+Measurements were taking every 0.5 meters in the indoor environment,
+ but the error from the model is much larger than 0.5 meters as shown in Fig. 3.
+Based on Fig. 4, we also can see that predictions of the online dataset do not appear to be very close to the actual positions.
+Overall, the \texttt{k}-NN does not appear to be very useful for predicting position based on RSSI values.
+
+In addition, \texttt{k}-NN is a slow prediction algorithm because 
+ it computes distance across the entire data set every time it is executed. 
+As noted earlier, the algorithm scales as shown in (\ref{eqn:knncomplexity}). 
+This calculation time is not practical for a real-time location as the overhead
+time consumption for computation is too great. 
+Given that electromagnetic signal strength decreases by $1/d^2$ per unit distance $d$ as described by \cite{Hayt},
+ polynomial regression may be a better suited alternative to the K-Nearest Neighbors model used. 
+In addition, polynomial regression has a much smaller time complexity than
+ \texttt{k}-NN since it does not have to re-evaluate the entire data set for each new prediction.
 
 The following assumptions would need to be met for a regression approach to be efficable:
 
@@ -544,6 +610,29 @@ readData =
     
     return(offline)
   }
+  
+
+
+# libraries
+library(pacman)
+p_load(tidyverse, caret, dplyr, magrittr, knitr, tidyr)
+source('./functions.R')
+
+# set a random seed for repodicibility
+set.seed(42)
+
+# load the data
+offline <- readData()
+online <- readData(filename = './online.data.txt',
+                   subMacs = unique(offline$mac))
+
+macAddresses <- sort(unique(offline$mac))
+
+# create a unique position identifier
+offline$posXY <- paste(offline$posX, offline$posY, sep = '-')
+online$posXY <- paste(online$posX, online$posY, sep = '-')
+
+
 
 ```
 
