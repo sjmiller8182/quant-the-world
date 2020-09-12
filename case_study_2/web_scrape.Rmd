@@ -54,7 +54,7 @@ extractResTable =
       div1 = getNodeSet(doc, "//div[@class='Section1']")
       pres = getNodeSet(div1[[1]], "//pre")
       els = sapply(pres, xmlValue)
-      els = gsub("Â", " ", els)
+      els = gsub("Â", "", els)
     }
     else if (year == 1999) {
       # Get preformatted text from <pre> elements
@@ -89,21 +89,25 @@ sapply(menTables, length)
 save(menTables, file = "CBMenTextTables.rda")
 ```
 ```{r}
-men_2011<-extractResTable(url = urls[11], year = 2011, sex = 'male')
+men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
+men_2008<-extractResTable(url = urls[10], year = 2008, sex = 'male')
+
 ```
 ```{r}
-men_2011[1:10]
+men_2008[1:10]
+men_2009[1:10]
 ```
+
 ```{r}
-equals_idx<- grep('^===', men_2011)
+equals_idx<- grep('^===', men_2009)
 equals_idx
 
-equals_idx2<- substr(men_2011, 1,3)
+equals_idx2<- substr(men_2009, 1,3)
 which(equals_idx2 == '===')
 
-spacerRow<- men_2011[equals_idx]
-headerRow<- men_2011[equals_idx -1]
-body<- men_2011[-(1:equals_idx)]
+spacerRow<- men_2009[equals_idx]
+headerRow<- men_2009[equals_idx -1]
+body<- men_2009[-(1:equals_idx)] # working with 2009 body
 ```
 ```{r}
 head(body)
@@ -118,12 +122,17 @@ headerRow
 ageStart<- regexec('ag', headerRow, fixed = TRUE)
 ageStart
 ```
-
+ "        1         1/1420             1 Ridouane Harroufi           27 Morocco                               45:56     45:56#   4:36 " 
+ 
+ "        27 " "           " "           " "       26 M" "        26 " "     23 Ken"
 ```{r}
 age<- substr(body, start = 49, stop = 50)
 head(age)
+```
+```{r}
 summary(as.numeric(age))
 ```
+
 ```{r}
 #gregexpr looks for all matches of a given sequence
 blankLocs<- gregexpr(' ', spacerRow)
@@ -252,7 +261,7 @@ sapply(age,  function(x) sum(is.na(x)))
 ```
 ```{r}
 # the spacing is not the same in the 2009 table
-head(menTables['2009'])
+head(menTables['2001'])
 ```
 ```{r}
 selectCols = function(shortColNames, headerRow, searchLocs) {
@@ -314,13 +323,7 @@ sapply(age, function(x) sum(is.na(x)))
 ```{r}
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
-```{r}
-menTables['2008']
-```
-
-```{r}
-menTables['2009']
-```
+                
 
 ```{r}
 which(age2001 < 5)
