@@ -323,15 +323,101 @@ sapply(age, function(x) sum(is.na(x)))
 ```{r}
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
-                
+```{r}
+head(menResMat[['2001']])
+```
+```{r}
+reformat_ages<- sapply()
+```
 
 ```{r}
-which(age2001 < 5)
+# length(age)
+# t<- age[['2001']] < 10
+# sum(t)
+# young<- age[['2001']][-c(t)]
+# length(young)
+young<- menResMat[['2001']][,'ag'] < 10
+sum(young)
+menResMat[['2001']]<- menResMat[['2001']][-c(young),]
+y2002<- menResMat[['2002']][,'ag'] < 10
+y2003<- menResMat[['2003']][,'ag'] < 10
+menResMat[['2002']]<- menResMat[['2002']][-c(y2002),]
+menResMat[['2003']]<- menResMat[['2003']][-c(y2003),]
+```
+```{r}
 
-menTables['2001'][ which(age2001 < 5) + 5 ]
+y2002<- menResMat[['2002']][,'ag'] < 10
+y2003<- menResMat[['2003']][,'ag'] < 10
+sum(y2002)
+sum(y2003)
+sum(young)
+```
+```{r}
+menResDF = lapply(menResMat, data.frame)
+head(menResDF[1])
 
-charTime = menResMat[['2012']][, 'time']
-head(charTime, 5)
+```
+```{r}
+col_1999 = rep(1999, nrow(menResDF$`1999`))
+
+col_2000 = rep(2000, nrow(menResDF$`2000`))
+
+col_2001 = rep(2001, nrow(menResDF$`2001`))
+
+col_2002 = rep(2002, nrow(menResDF$`2002`))
+
+col_2003 = rep(2003, nrow(menResDF$`2003`))
+
+col_2004 = rep(2004, nrow(menResDF$`2004`))
+
+col_2005 = rep(2005, nrow(menResDF$`2005`))
+
+col_2006 = rep(2006, nrow(menResDF$`2006`))
+
+col_2007 = rep(2007, nrow(menResDF$`2007`))
+
+col_2008 = rep(2008, nrow(menResDF$`2008`))
+
+col_2009 = rep(2009, nrow(menResDF$`2009`))
+
+col_2010 = rep(2010, nrow(menResDF$`2010`))
+
+col_2011 = rep(2011, nrow(menResDF$`2011`))
+
+col_2012 = rep(2012, nrow(menResDF$`2012`))
+
+cols = c(col_1999, col_2000, col_2001, col_2002, col_2003, col_2004, col_2005, col_2006, col_2007, col_2008, col_2009, col_2010, col_2011, col_2012)
+```
+
+```{r}
+menResFinal = data.frame()
+for (i in 1:length(names(menResDF))) {
+  
+  df<- menResDF[[i]]
+  menResFinal = rbind(menResFinal, df)
+}
+menResFinal$Date<- cols
+```
+
+```{r}
+badAges<- sapply(menResMat, function(x) x[,'ag'] < 10)
+str(badAges)
+sapply(badAges, sum)
+```
+
+```{r}
+str(menResMat)
+```
+          
+
+```{r}
+class(age[['2001']])
+```
+
+
+```{r}
+badAgeIndex<- which(is.na(age))
+menResMat['2001'][badAgeIndex]
 ```
 
 ```{r}
@@ -354,6 +440,10 @@ sapply(womenTables, length)
 ```
 ```{r}
 womenResMat = lapply(womenFiles, extractVariables)
+names(womenTables) = 1999:2012
+womenResMat = lapply(womenTables, extractVariables)
+head(womenResMat[[3]], 10)
+tail(womenResMat[[3]], 10)
 ```
 
 
