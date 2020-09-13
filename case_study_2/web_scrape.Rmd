@@ -400,25 +400,43 @@ menResFinal$Date<- cols
 ```
 
 ```{r}
-badAges<- sapply(menResMat, function(x) x[,'ag'] < 10)
-str(badAges)
-sapply(badAges, sum)
+menResFinal$ag = as.numeric(menResFinal$ag)
+sum(is.na(menResFinal$ag))
+```
+```{r}
+times = menResFinal$time
+timePieces = strsplit(times, ":")
+
+tail(timePieces)
+
+timePieces = sapply(timePieces, as.numeric)
+head(timePieces)
+```
+```{r}
+timePieces[1:5]
+class(timePieces)
+timePieces[1]
 ```
 
 ```{r}
-str(menResMat)
-```
-          
+runTime = sapply(timePieces, 
+                 function(x) {
+                   if (length(x) == 2) x[1] + x[2]/60
+                   else 60*x[1] + x[2] + x[3]/60
+                 })
 
-```{r}
-class(age[['2001']])
+summary(runTime)
+
+convertTime = function(time) {
+  timePieces = strsplit(time, ":")
+  timePieces = sapply(timePieces, as.numeric)
+  sapply(timePieces, function(x) {
+                      if (length(x) == 2) x[1] + x[2]/60
+                      else 60*x[1] + x[2] + x[3]/60
+                      })
+}
 ```
 
-
-```{r}
-badAgeIndex<- which(is.na(age))
-menResMat['2001'][badAgeIndex]
-```
 
 ```{r}
 womenURLs = 
