@@ -68,7 +68,6 @@ extractResTable =
       txt = xmlValue(pres[[1]])
       els = strsplit(txt, "\r\n")[[1]]   
     } 
-    
     if (is.null(file)) return(els)
     # Write the lines as a text file.
     writeLines(els, con = file)
@@ -426,7 +425,8 @@ runTime = sapply(timePieces,
                  })
 
 summary(runTime)
-
+```
+```{r}
 convertTime = function(time) {
   timePieces = strsplit(time, ":")
   timePieces = sapply(timePieces, as.numeric)
@@ -436,7 +436,48 @@ convertTime = function(time) {
                       })
 }
 ```
+```{r}
+createDF = function(Res, year, sex) 
+{
+  # Determine which time to use
+  if ( !is.na(Res[1, 'net']) ) useTime = Res[ , 'net']
+  else if ( !is.na(Res[1, 'gun']) ) useTime = Res[ , 'gun']
+  else useTime = Res[ , 'time']
+  
+  # Remove # and * and blanks from time
+  useTime = gsub("[#\\*[:blank:]]", "", useTime)
+  runTime = convertTime(useTime[ useTime != "" ])
+  
+  # Drop rows with no time
+  Res = Res[ useTime != "", ]
+  
+  Results = data.frame(year = rep(year, nrow(Res)),
+                       sex = rep(sex, nrow(Res)),
+                       name = Res[ , 'name'], home = Res[ , 'home'],
+                       age = as.numeric(Res[, 'ag']), 
+                       runTime = runTime,
+                       stringsAsFactors = FALSE)
+  invisible(Results)
+}
 
+menDF = mapply(createDF, menResMat, year = 1999:2012,
+               sex = rep("M", 14), SIMPLIFY = FALSE)
+```
+
+```{r}
+sapply(menDF, function(x) sum(is.na(x$runTime)))
+
+separatorIdx = grep("^===", menTables[["2006"]])
+separatorRow = menTables[['2006']][separatorIdx]
+separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
+                      substring(separatorRow, 65, nchar(separatorRow)), 
+                      sep = "")
+menTables[['2006']][separatorIdx] = separatorRowX
+
+menResMat = sapply(menTables, extractVariables)
+menDF = mapply(createDF, menResMat, year = 1999:2012,
+               sex = rep("M", 14), SIMPLIFY = FALSE)
+```
 
 ```{r}
 womenURLs = 
@@ -456,12 +497,24 @@ womenTables = mapply(extractResTable, url = urls, year = years, sex='female')
 names(womenTables) = years
 sapply(womenTables, length)
 ```
+
+
 ```{r}
-womenResMat = lapply(womenFiles, extractVariables)
-names(womenTables) = 1999:2012
-womenResMat = lapply(womenTables, extractVariables)
-head(womenResMat[[3]], 10)
-tail(womenResMat[[3]], 10)
+separatorIdx = grep("^===", womenTables[["2006"]])
+separatorRow = womenTables[['2006']][separatorIdx]
+separatorRowX = paste(substring(separatorRow, 1, 63), " ",
+                      substring(separatorRow, 65, nchar(separatorRow)),
+                      sep = "")
+womenTables[['2006']][separatorIdx] = separatorRowX
+
+womenTables[['2001']][2:3] = womenTables[['2002']][2:3]
+
+womenResMat = sapply(womenTables, extractVariables)
+womenDF = mapply(createDF, womenResMat, year = 1999:2012,
+               sex = rep("W", 14), SIMPLIFY = FALSE)
 ```
 
-
+```{r}
+#head(menDF)
+head(womenDF)
+```
