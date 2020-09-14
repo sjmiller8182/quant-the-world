@@ -518,3 +518,38 @@ womenDF = mapply(createDF, womenResMat, year = 1999:2012,
 #head(menDF)
 head(womenDF)
 ```
+```{r}
+sapply(womenDF, function(x) sum(is.na(x$age)))
+```
+
+```{r}
+sapply(womenDF, function(x) sum(is.na(x$runTime)))
+```
+```{r}
+sapply(menDF, function(x) sum(is.na(x$age)))
+sapply(menDF, function(x) sum(is.na(x$runTime)))
+```
+```{r}
+menDF_complete = na.omit(menDF)
+womenDF_complete = na.omit(womenDF)
+```
+
+```{r}
+cherryblossom = data.frame()
+for (i in 1:14) {
+  
+  df<- menDF_complete[[i]]
+  cherryblossom = rbind(cherryblossom, df)
+}
+head(cherryblossom)
+```
+
+```{r}
+for (i in 1:14) {
+  
+  df<- womenDF_complete[[i]]
+  cherryblossom = rbind(cherryblossom, df)
+}
+tail(cherryblossom)
+```
+
