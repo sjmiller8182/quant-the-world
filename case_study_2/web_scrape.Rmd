@@ -552,4 +552,12 @@ for (i in 1:14) {
 }
 tail(cherryblossom)
 ```
+```{r}
+sum(is.na(cherryblossom))
+```
+
+```{r}
+cherryblossom = na.omit(cherryblossom)
+sum(is.na(cherryblossom))
+```
 
