@@ -45,12 +45,8 @@ editor_options:
 
 # Introduction
 
-The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle.
-In this case study we collect data on participates of the Cherry Blossom Race
- from the Cherry Blossom Race website\footnotemark.
-We find that there are a number of issues present in the data,
- including inconssitent web addressing formatting, inconsistent formatting, and missing data.
-We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
+The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle. In this case study we collect data on participates of the Cherry Blossom Race from the Cherry Blossom Race website\footnotemark.
+We find that there are a number of issues present in the data, including inconssitent web addressing formatting, inconsistent formatting, and missing data. We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
 
 \footnotetext{See http://www.cherryblossom.org/.}
 
@@ -62,20 +58,13 @@ We collect and clean this data to provide the Men's and Women's information in a
 
 ### Data Collection
 
-In this case study, we collected data on participants in the Cherry Blossom Race.
-We scraped the data for Men and Woman from 1999 to 2012.
-The data was stored under the base address in the following form
- where year is between 1999 and 2012 and page is a specific page name.
+In this case study, we collected data on participants in the Cherry Blossom Race. We scraped the data for Men and Woman from 1999 to 2012. The data was stored under the base address in the following form, where the year is between 1999 and 2012 and page is a specific page name.
 
 ```
 http://www.cherryblossom.org/results/<year>/<page>
 ```
 
-The specific addresses where the data is stored are given in table 1.
-While the structure follows `results/<year>` consistently, 
- the page naming for each year is not consistent.
-In some cases, the names for the men's and women's pages are `men` and `women`, repectively.
-While, in other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
+The specific addresses where the data is stored are given in table 1. While the structure follows `results/<year>` consistently, the page naming for each year is not consistent. In some cases, the names for the men's and women's pages are `men` and `women`, repectively. In other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
 
 **Table 1. Web Page Pages**
 
@@ -99,85 +88,6 @@ While, in other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `m
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-# Introduction
-
-The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle.
-
-In this case study we collect data on participates of the Cherry Blossom Race
-
- from the Cherry Blossom Race website\footnotemark.
-
-We find that there are a number of issues present in the data,
-
- including inconssitent web addressing formatting, inconsistent formatting, and missing data.
-
-We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
-
-\footnotetext{See http://www.cherryblossom.org/.}
-
-# Methods
-
-## Data 
-
-### Data Collection
-
-In this case study, we collected data on participants in the Cherry Blossom Race.
-
-We scraped the data for Men and Woman from 1999 to 2012.
-
-The data was stored under the base address in the following form
-
- where year is between 1999 and 2012 and page is a specific page name.
-
-```
-
-http://www.cherryblossom.org/results/<year>/<page>
-
-```
-
-The specific addresses where the data is stored are given in table 1.
-
-While the structure follows `results/<year>` consistently, 
-
- the page naming for each year is not consistent.
-
-In some cases, the names for the men's and women's pages are `men` and `women`, repectively.
-
-While, in other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
-
-**Table 1. Web Page Pages**
-
-| Year | Men's Pages                      | Women's Pages             |
-
-|------|----------------------------------|---------------------------|
-
-| 1999 | `results/1999/cb99m.html`        | `results/1999/cb99f.html` |
-
-| 2000 | `results/2000/Cb003m.htm`        | `results/2000/Cb003f.htm` |
-
-| 2001 | `results/2001/oof_m.html`        | `results/2001/oof_f.html` |
-
-| 2002 | `results/2002/oofm.htm`          | `results/2002/ooff.htm`   |
-
-| 2003 | `results/2003/CB03-M.HTM`        | `results/2003/CB03-F.HTM` |
-
-| 2004 | `results/2004/men.htm`           | `results/2004/women.htm`  |
-
-| 2005 | `results/2005/CB05-M.htm`        | `results/2005/CB05-F.htm` |
-
-| 2006 | `results/2006/men.htm`           | `results/2006/women.htm`  |
-
-| 2007 | `results/2007/men.htm`           | `results/2007/women.ht`   |
-
-| 2008 | `results/2008/men.htm`           | `results/2008/women.htm`  |
-
-| 2009 | `results/2009/09cucb-M.htm`      | `results/2009/09cucb-F.htm`      |
-
-| 2010 | `results/2010/2010cucb10m-m.htm` | `results/2010/2010cucb10m-F.htm` |
-
-| 2011 | `results/2011/2011cucb10m-m.htm` | `results/2011/2011cucb10m-F.htm` |
-
-| 2012 | `results/2012/2012cucb10m-m.htm` | `results/2012/2012cucb10m-F.htm` |
 
 ```{r}
 
@@ -251,10 +161,15 @@ sapply(menTables, length)
 
 save(menTables, file = "CBMenTextTables.rda")
 ```
+
+The data are successfully scraped from the urls that are given and we observe that the number of participants in the Cherry Blossom race has increased steadily from 1999 to 2012. We can use the `extractResTable` function to exptract all of the results, or to specify a single set of results.
+
 ```{r}
 men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
 men_2009[1:10]
 ```
+
+We observe the formatting of the text data, such as the use of the `=` character can be used to transform the lines of text into a a matrix. We will use this pattern to identify the boundary between the headering and the body of the data. 
 
 ```{r}
 equals_idx<- grep('^===', men_2009)
@@ -271,10 +186,15 @@ body<- men_2009[-(1:equals_idx)] # working with 2009 body
 head(body)
 ```
 
+We can use the text above the `=` boundary as a header row to identify the columns names. 
+
 ```{r}
 headerRow<- tolower(headerRow)
 headerRow
 ```
+
+Now that we have defined the column names, we are free to use the text structure, such as the spacing of column names and data, to identify datapoints. We will start with `ag`.
+
 ```{r}
 # looks for first match of given sequence
 ageStart<- regexec('ag', headerRow, fixed = TRUE)
@@ -291,6 +211,8 @@ head(age)
 summary(as.numeric(age))
 ```
 
+We have successfully used the structure of the text data to identify an index location for `ag` data points. We can continue to use the spacing of text data to identify other data points.
+
 ```{r}
 #gregexpr looks for all matches of a given sequence
 blankLocs<- gregexpr(' ', spacerRow)
@@ -301,11 +223,16 @@ searchLocs<- c(0,blankLocs[[1]])
 searchLocs
 ```
 
+The spacing indices will now be used in a funtion that can compile a matrix of data points across the entire list of tables. 
+
 ```{r}
 values<- mapply(substr, list(body), start = searchLocs[-length(searchLocs)] +1, stop = searchLocs[-1] -1)
 length(values)
 head(values)
 ```
+
+A function `findColLocs` can be defined that uses these space indices to locate the begin points for data throughout the extracte text data. 
+
 ```{r}
 findColLocs<- function(spacerRow){
   spaceLocs<- gregexpr(' ', spacerRow)[[1]]
@@ -320,6 +247,9 @@ locs_2012<- findColLocs(spacerRow)
 length(locs_2012)
 locs_2012
 ```
+
+`selectCols` is a tool that uses `findColLocs` to locate the data points for each column throughout the text for all of the race years.
+
 ```{r}
 selectCols = 
 function(colNames, headerRow, searchLocs) 
@@ -337,6 +267,9 @@ function(colNames, headerRow, searchLocs)
          headerRow = headerRow, searchLocs = searchLocs )
 }
 ```
+
+We can examine the results for validity with the summary function. Our functions have extracted almost all of the age data and may have identified some errors within the dataset.
+
 ```{r}
 searchLocs = findColLocs(spacerRow)
 ageLoc = selectCols("ag", headerRow, searchLocs) 
@@ -344,6 +277,9 @@ ages = mapply(substr, list(body),
               start = ageLoc[1,], stop = ageLoc[2, ])
 summary(as.numeric(ages))
 ```
+
+We can test the functionality of the tools we have assembled so far.
+
 ```{r}
 shortColNames = c("name", "home", "ag", "gun", "net", "time")
 locCols = selectCols(shortColNames, headerRow, searchLocs)
@@ -358,6 +294,9 @@ colnames(Values) = shortColNames
 head(Values)
 tail(Values)[ , 1:3]
 ```
+
+To generalize this method, we define a function that combines the various processes we have used so far in the `extractVariables` function. 
+
 ```{r}
 extractVariables = 
   function(file, varNames =c("name", "home", "ag", "gun",
@@ -388,20 +327,17 @@ menTables = mapply(extractResTable, url = urls, year = years)
 names(menTables) = years
 ```
 
+We now have a list of matrices. The original text data are in a much more machine readable format. Our number of rows for each matrix is equal to the number of original rows, minus the original text header.
+
 ```{r}
 menResMat = lapply(menTables, extractVariables)
 length(menResMat)
 
 sapply(menResMat, nrow)
 ```
-```{r}
-sapply(menResMat, class)
-```
-```{r}
-# how to we index this??
-# a list of matrices
-menResMat$`1999`[1:10,]
-```
+
+To perform statistical analyses on the numeric data, we must perform a datatype transformation.
+
 ```{r}
 age = as.numeric(menResMat[['2012']][ , 'ag'])
 
@@ -411,15 +347,11 @@ age = sapply(menResMat,
              function(x) as.numeric(x[ , 'ag']))
 
 ```
+
+There appears to be an anomoly in the process for the year 2003. After an examination of the original data table, we found that the spacing in the year 2003 data is not the same as the other years. We will adjust our `selectCols` function to capture the data for 2003.
+
 ```{r}
 boxplot(age, ylab = "Age", xlab = "Year")
-```
-```{r}
-sapply(age,  function(x) sum(is.na(x)))
-```
-```{r}
-# the spacing is not the same in the 2009 table
-head(menTables['2001'])
 ```
 ```{r}
 selectCols = function(shortColNames, headerRow, searchLocs) {
@@ -431,6 +363,8 @@ selectCols = function(shortColNames, headerRow, searchLocs) {
   }, headerRow = headerRow, searchLocs = searchLocs )
 }
 ```
+
+We also observe anomolies in the formatting of the year 2001. We introduce fixes and scrape the original tables once more to form the list of matrices called `menResMat`.
 
 ```{r}
 age2001 = age[["2001"]]
@@ -485,13 +419,7 @@ head(menResMat[['2001']])
 
 
 ```{r}
-# length(age)
-# t<- age[['2001']] < 10
-# sum(t)
-# young<- age[['2001']][-c(t)]
-# length(young)
 young<- menResMat[['2001']][,'ag'] < 10
-sum(young)
 menResMat[['2001']]<- menResMat[['2001']][-c(young),]
 y2002<- menResMat[['2002']][,'ag'] < 10
 y2003<- menResMat[['2003']][,'ag'] < 10
@@ -502,14 +430,9 @@ menResMat[['2003']]<- menResMat[['2003']][-c(y2003),]
 
 y2002<- menResMat[['2002']][,'ag'] < 10
 y2003<- menResMat[['2003']][,'ag'] < 10
-sum(y2002)
-sum(y2003)
-sum(young)
 ```
 ```{r}
 menResDF = lapply(menResMat, data.frame)
-head(menResDF[1])
-
 ```
 ```{r}
 col_1999 = rep(1999, nrow(menResDF$`1999`))
@@ -557,7 +480,7 @@ menResFinal$Date<- cols
 menResFinal$ag = as.numeric(menResFinal$ag)
 sum(is.na(menResFinal$ag))
 ```
-```{r}
+```{r, include = FALSE}
 times = menResFinal$time
 timePieces = strsplit(times, ":")
 
@@ -591,7 +514,7 @@ convertTime = function(time) {
                       })
 }
 ```
-```{r}
+```{r, include = FALSE}
 createDF = function(Res, year, sex) 
 {
   # Determine which time to use
@@ -669,10 +592,6 @@ womenDF = mapply(createDF, womenResMat, year = 1999:2012,
                sex = rep("W", 14), SIMPLIFY = FALSE)
 ```
 
-```{r}
-#head(menDF)
-head(womenDF)
-```
 ```{r}
 sapply(womenDF, function(x) sum(is.na(x$age)))
 ```
