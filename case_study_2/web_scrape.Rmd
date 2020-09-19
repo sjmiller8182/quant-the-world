@@ -41,8 +41,60 @@ header-includes:
 editor_options: 
 
   chunk_output_type: console
-
 ---
+
+# Introduction
+
+The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle.
+In this case study we collect data on participates of the Cherry Blossom Race
+ from the Cherry Blossom Race website\footnotemark.
+We find that there are a number of issues present in the data,
+ including inconssitent web addressing formatting, inconsistent formatting, and missing data.
+We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
+
+\footnotetext{See http://www.cherryblossom.org/.}
+
+
+# Methods
+
+## Data 
+
+
+### Data Collection
+
+In this case study, we collected data on participants in the Cherry Blossom Race.
+We scraped the data for Men and Woman from 1999 to 2012.
+The data was stored under the base address in the following form
+ where year is between 1999 and 2012 and page is a specific page name.
+
+```
+http://www.cherryblossom.org/results/<year>/<page>
+```
+
+The specific addresses where the data is stored are given in table 1.
+While the structure follows `results/<year>` consistently, 
+ the page naming for each year is not consistent.
+In some cases, the names for the men's and women's pages are `men` and `women`, repectively.
+While, in other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
+
+**Table 1. Web Page Pages**
+
+| Year | Men's Pages                      | Women's Pages             |
+|------|----------------------------------|---------------------------|
+| 1999 | `results/1999/cb99m.html`        | `results/1999/cb99f.html` |
+| 2000 | `results/2000/Cb003m.htm`        | `results/2000/Cb003f.htm` |
+| 2001 | `results/2001/oof_m.html`        | `results/2001/oof_f.html` |
+| 2002 | `results/2002/oofm.htm`          | `results/2002/ooff.htm`   |
+| 2003 | `results/2003/CB03-M.HTM`        | `results/2003/CB03-F.HTM` |
+| 2004 | `results/2004/men.htm`           | `results/2004/women.htm`  |
+| 2005 | `results/2005/CB05-M.htm`        | `results/2005/CB05-F.htm` |
+| 2006 | `results/2006/men.htm`           | `results/2006/women.htm`  |
+| 2007 | `results/2007/men.htm`           | `results/2007/women.ht`   |
+| 2008 | `results/2008/men.htm`           | `results/2008/women.htm`  |
+| 2009 | `results/2009/09cucb-M.htm`      | `results/2009/09cucb-F.htm`      |
+| 2010 | `results/2010/2010cucb10m-m.htm` | `results/2010/2010cucb10m-F.htm` |
+| 2011 | `results/2011/2011cucb10m-m.htm` | `results/2011/2011cucb10m-F.htm` |
+| 2012 | `results/2012/2012cucb10m-m.htm` | `results/2012/2012cucb10m-F.htm` |
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -662,5 +714,18 @@ sum(is.na(cherryblossom))
 ```{r}
 cherryblossom = na.omit(cherryblossom)
 sum(is.na(cherryblossom))
+```
+
+# Conclusion
+
+
+
+\appendix
+
+
+# Code
+
+```
+The code is cooool
 ```
 
