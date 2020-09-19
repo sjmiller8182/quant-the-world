@@ -3,43 +3,24 @@ title: "Modeling Runners' Times in the Cherry Blossom Race"
 author: "Justin Howard, Stuart Miller, Paul Adams"
 date: "September 22, 2020"
 lang: en-US
-
 class: man
-
 # figsintext: true
-
 numbersections: true
-
 encoding: UTF-8
-
 output:
-
   bookdown::pdf_document2:
-
      citation_package: natbib
-
      keep_tex: true
-
      toc: false
-
 header-includes:
-
    - \usepackage{amsmath}
-
    - \usepackage{gensymb}
-
    - \usepackage[utf8]{inputenc}
-
    - \usepackage[T1]{fontenc}
-
    - \usepackage{setspace}
-
    - \usepackage{hyperref}
-
    - \onehalfspacing
-
 editor_options: 
-
   chunk_output_type: console
 ---
 
@@ -482,7 +463,7 @@ sum(is.na(menResFinal$ag))
 ```
 ```{r, include = FALSE}
 times = menResFinal$time
-timePieces = strsplit(times, ":")
+timePieces = strsplit(as.character(times), ":")
 
 tail(timePieces)
 
