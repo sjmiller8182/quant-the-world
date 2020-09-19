@@ -385,19 +385,25 @@ function(file, varNames =c("name", "home", "ag", "gun",
 
 menResMat = lapply(menTables, extractVariables)
 ```
+
+We must reformat the `ag` data to a numeric format for analysis. 
 ```{r}
 age<- sapply(menResMat, function(x) as.numeric(x[, 'ag']))
 ```
+
+We can observe a mostly cleaned dataset with trace numbers of NA values across the 14 matrices.
+
 ```{r}
 sapply(age, function(x) sum(is.na(x)))
 ```
+
+We will also observe the distributions of `ag` across each race. We can observe a few very young participants between 2001 and 2003. These may be errors and require a closer examination. 
+
 ```{r}
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
-```{r}
-head(menResMat[['2001']])
-```
 
+Many of these participants have an `ag` value of 0. There are very few of these values, so we will remove them from consideration.
 
 ```{r}
 young<- menResMat[['2001']][,'ag'] < 10
@@ -406,12 +412,12 @@ y2002<- menResMat[['2002']][,'ag'] < 10
 y2003<- menResMat[['2003']][,'ag'] < 10
 menResMat[['2002']]<- menResMat[['2002']][-c(y2002),]
 menResMat[['2003']]<- menResMat[['2003']][-c(y2003),]
-```
-```{r}
-
 y2002<- menResMat[['2002']][,'ag'] < 10
 y2003<- menResMat[['2003']][,'ag'] < 10
 ```
+
+To make the remaining analyses easier, we will transform the data structure from a list of matrices into a dataframe. To identify the data by year, we must add year vectors with lengths equal to the number of rows in each matrix.
+
 ```{r}
 menResDF = lapply(menResMat, data.frame)
 ```
@@ -457,10 +463,15 @@ for (i in 1:length(names(menResDF))) {
 menResFinal$Date<- cols
 ```
 
+Our data is now in a much more convenient data structure. 
+
 ```{r}
 menResFinal$ag = as.numeric(menResFinal$ag)
 sum(is.na(menResFinal$ag))
 ```
+
+Combining the data into a single dataframe facilitates the cleaning of the columns containing the time data for each runner. These values are all still stored as characters and are in an HR:MIN:SEC format. We can separate the values and convert them all into a standard time format, minutes.
+
 ```{r, include = FALSE}
 times = menResFinal$time
 timePieces = strsplit(as.character(times), ":")
@@ -470,11 +481,8 @@ tail(timePieces)
 timePieces = sapply(timePieces, as.numeric)
 head(timePieces)
 ```
-```{r}
-timePieces[1:5]
-class(timePieces)
-timePieces[1]
-```
+
+We define a function that converts the time into a minute format.
 
 ```{r}
 runTime = sapply(timePieces, 
@@ -495,6 +503,9 @@ convertTime = function(time) {
                       })
 }
 ```
+
+We can combine these tools into a single function that will process the times. The end result will be a dataframe called menDF.
+
 ```{r, include = FALSE}
 createDF = function(Res, year, sex) 
 {
@@ -523,6 +534,8 @@ menDF = mapply(createDF, menResMat, year = 1999:2012,
                sex = rep("M", 14), SIMPLIFY = FALSE)
 ```
 
+Finally, we find a few residual issues with the data from 2006 and clean that data and finalize our menDF dataframe.
+
 ```{r}
 sapply(menDF, function(x) sum(is.na(x$runTime)))
 
@@ -538,6 +551,8 @@ menDF = mapply(createDF, menResMat, year = 1999:2012,
                sex = rep("M", 14), SIMPLIFY = FALSE)
 ```
 
+With this process complete, we can simply re-use the functions on the women's data. 
+
 ```{r}
 womenURLs = 
   c("results/1999/cb99f.html", "results/2000/Cb003f.htm", "results/2001/oof_f.html",
@@ -551,14 +566,14 @@ womenURLs =
 
 years = 1999:2012
 urls = paste(ubase, womenURLs, sep = "")
-urls[1:3]
 womenTables = mapply(extractResTable, url = urls, year = years, sex='female')
 names(womenTables) = years
 sapply(womenTables, length)
 ```
 
+We observe similar issues in the women's data that we did in the men's data for the year 2006.
 
-```{r}
+```{r, inlcude = FALSE}
 separatorIdx = grep("^===", womenTables[["2006"]])
 separatorRow = womenTables[['2006']][separatorIdx]
 separatorRowX = paste(substring(separatorRow, 1, 63), " ",
@@ -573,21 +588,26 @@ womenDF = mapply(createDF, womenResMat, year = 1999:2012,
                sex = rep("W", 14), SIMPLIFY = FALSE)
 ```
 
+The `ag` column indicates a mostly successful data preprocessing scheme.
+
 ```{r}
 sapply(womenDF, function(x) sum(is.na(x$age)))
 ```
 
+The `runTime` column is completely clean.
+
 ```{r}
 sapply(womenDF, function(x) sum(is.na(x$runTime)))
 ```
-```{r}
-sapply(menDF, function(x) sum(is.na(x$age)))
-sapply(menDF, function(x) sum(is.na(x$runTime)))
-```
+
+Since there are so few NA values, we can safely remove them without affecting the results of the analysis.
+
 ```{r}
 menDF_complete = na.omit(menDF)
 womenDF_complete = na.omit(womenDF)
 ```
+
+We can combine the men's and women's data into a single dataframe for a complete analysis of the results over a 14 year period. 
 
 ```{r}
 cherryblossom = data.frame()
@@ -610,6 +630,8 @@ tail(cherryblossom)
 ```{r}
 sum(is.na(cherryblossom))
 ```
+
+Our dataset is complete, clean, and ready for further analysis.
 
 ```{r}
 cherryblossom = na.omit(cherryblossom)
