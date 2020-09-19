@@ -325,9 +325,7 @@ boxplot(age, ylab = "Age", xlab = "Year")
 ```{r}
 head(menResMat[['2001']])
 ```
-```{r}
-reformat_ages<- sapply()
-```
+
 
 ```{r}
 # length(age)
