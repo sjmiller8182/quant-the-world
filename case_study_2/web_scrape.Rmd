@@ -645,119 +645,93 @@ head(cherryblossom)
 
 
 # Conclusion
-Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland.
+Additionally, we identified 12 runners without valid home addresses, which we imputed with valid addresses they had provided in previous races. For these runners, the states (including D.C. as Washington, D.C.) were the same. This was useful when determining race times.
 
-```{r}
+Also, country names were standardized according to iso3166, which was useful for both naming consistency and production of the global map we used for visualizing race completion times.
+
+These webscraping methods proved useful for identifying the times of race completion per runner from year 1999 through 2012. From this information we were able to identify average race completion times, by nation. Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland. With repsect to states, the state with the fastest average run time was Nevada across all years, while the slowest was North Dakota.
+
+```{r Global Map, include= TRUE, warning=F}
 library(pacman)
-p_load(rnaturalearth,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, gdata, maps)
+p_load(rnaturalearth,rnaturalearthdata,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, maps)
 
-cherryblossom[gdata::trim(cherryblossom$name)=="Matthew Rogers",]$home = "Arlington VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Adri Jayaratne",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Marla Hallacy",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Eleanor Rathbone",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Emily Naden",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Grace L Chen",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Stephanie Rogers",]$home = "Aldie VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Sarah Garner",]$home = "	Arlington VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Maria Solomon",]$home = "Arlington VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Amy Iacopi",]$home = "San Francisco CA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Sarah Watkins",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Alissa Havens",]$home = "Washington DC"
+
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Matthew Rogers",]$home = "Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Adri Jayaratne",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Eleanor Rathbone",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Emily Naden",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Grace L Chen",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Stephanie Rogers",]$home = "Aldie VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Sarah Garner",]$home = "	Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Maria Solomon",]$home = "Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Amy Iacopi",]$home = "San Francisco CA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Sarah Watkins",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Alissa Havens",]$home = "Washington DC"
 
 cherryblossomX = cherryblossom
+cherryblossomX$home = trimws(cherryblossomX$home, "both", "[ \t\r\n]")
 
-cherryblossomX[gdata::trim(cherryblossomX$home)=="AUS",]$home = "Australia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Bri",]$home = "United Kingdom of Great Britain and Northern Ireland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="CAN",]$home = "Canada"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="COL",]$home = "Colombia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="CZE",]$home = "Czech Republic"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="ETH",]$home = "Ethiopia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Eth",]$home = "Ethiopia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Fra",]$home = "France"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="GER",]$home = "Germany"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="IRE",]$home = "Ireland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="JAP",]$home = "Japan"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="KEN",]$home = "Kenya"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="KOR",]$home = "Republic of Korea"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Ken",]$home = "Kenya"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="LIT",]$home = "Lithuania"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="MEX",]$home = "Mexico"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Mex",]$home = "Mexico"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Ny",]$home = "United States"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="MD",]$home = "United States"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="PER",]$home = "Peru"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="POL",]$home = "Poland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="RSA",]$home = "South Africa"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="ROM",]$home = "Romania"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="RUS",]$home = "Russia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Rom",]$home = "Romania"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Rus",]$home = "Russia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="SCO",]$home = "United Kingdom of Great Britain and Northern Ireland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Us",]$home = "United States"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Usa",]$home = "United States"
+
+cherryblossomX[cherryblossomX$home =="AUS",]$home = "Australia"
+cherryblossomX[cherryblossomX$home =="CAN",]$home = "Canada"
+cherryblossomX[cherryblossomX$home =="COL",]$home = "Colombia"
+cherryblossomX[cherryblossomX$home =="CZE",]$home = "Czech Republic"
+cherryblossomX[cherryblossomX$home =="Fra",]$home = "France"
+cherryblossomX[cherryblossomX$home =="GER",]$home = "Germany"
+cherryblossomX[cherryblossomX$home =="IRE",]$home = "Ireland"
+cherryblossomX[cherryblossomX$home =="JAP",]$home = "Japan"
+cherryblossomX[cherryblossomX$home =="KOR",]$home = "Republic of Korea"
+cherryblossomX[cherryblossomX$home =="LIT",]$home = "Lithuania"
+cherryblossomX[cherryblossomX$home =="PER",]$home = "Peru"
+cherryblossomX[cherryblossomX$home =="POL",]$home = "Poland"
+cherryblossomX[cherryblossomX$home =="RSA",]$home = "South Africa"
+
+cherryblossomX[cherryblossomX$home %in% c("ETH","Eth"),]$home = "Ethiopia"
+cherryblossomX[cherryblossomX$home %in% c("KEN","Ken"),]$home = "Kenya"
+cherryblossomX[cherryblossomX$home %in% c("MEX","Mex"),]$home = "Mexico"
+cherryblossomX[cherryblossomX$home %in% c("RUS","Rus"),]$home = "Russian Federation"
+cherryblossomX[cherryblossomX$home %in% c("ROM","Rom"),]$home = "Romania"
+cherryblossomX[cherryblossomX$home %in% c("Us","Usa","Ny","MD"),]$home = "United States"
+cherryblossomX[cherryblossomX$home %in% c("Bri","SCO"),]$home = "United Kingdom of Great Britain and Northern Ireland"
+
 
 dropVars <- c("", "Lee","M")
-cherryblossomX <- cherryblossomX[!(gdata::trim(cherryblossomX$home) %in% dropVars ),]
+cherryblossomX <- cherryblossomX[!(cherryblossomX$home %in% dropVars ),]
 
-for(i in 1:length(cherryblossomX$home)){
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','VI')){
-    cherryblossomX$home[i] <- 'United States'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-2, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('afb','AFB')){
-    cherryblossomX$home[i] <- 'United States'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-2, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('ONT')){
-    cherryblossomX$home[i] <- 'Canada'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('UK','LE')){
-    cherryblossomX$home[i] <- 'United Kingdom of Great Britain and Northern Ireland'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('CN','ON','NO','SA','BC')){ # Ontario, Nova Scotia, Seskatchewan, British Colombia
-    cherryblossomX$home[i] <- 'Canada'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% 'PR'){
-    cherryblossomX$home[i] <- 'Puerto Rico'
-  }
-    if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% 'GE'){
-    cherryblossomX$home[i] <- 'Germany'
-    }
-  if(trim(cherryblossomX$home[i]) %in% 'Rep Of S.africa'){
-    cherryblossomX$home[i] <- 'South Africa'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Dominican Republi'){
-    cherryblossomX$home[i] <- 'Dominican Republic'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Scotland'){
-    cherryblossomX$home[i] <- 'United Kingdom of Great Britain and Northern Ireland'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'NewZealand'){
-    cherryblossomX$home[i] <- 'New Zealand'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Russia'){
-    cherryblossomX$home[i] <- 'Russian Federation'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Tanzania'){
-    cherryblossomX$home[i] <- 'Tanzania, United Republic of'
-  }
-  else{
-    if(!gdata::trim(cherryblossomX$home[i]) %in% c('Australia','Bolivia, Plurinational State of','Brazil','United Kingdom of Great Britain and Northern Ireland','Canada','Colombia','CzechRepublic','DominicanRepubli','DominicanRepublic','Dominican Republic','Czech Republic','South Africa','Puerto Rico','Ethiopia','France','Germany','Guatemala','Ireland','Japan','Kenya','Republic of Korea','Lithuania','Malta','Mexico','Morocco','NewZealand','New Zealand','Peru','Poland','PuertoRico','RepOfS.africa','Romania','Russia','Russian Federation','SouthAfrica','Trinidad and Tobago','Ukraine','UnitedKingdom','Uruguay','Tanzania, United Republic of','Slovenia')){
-      cherryblossomX$home[i] <- 'United States'
-    }
-  }
-}
-```
-```{r, include = T}
-cherryblossomX$home <- gdata::trim(cherryblossomX$home)
+summary_table = sqldf("
+      select 
+      case when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AL',' AK',' AZ',' AR',' CA',' CO',' CT',' DE',' DC',' FL',' GA',' HI',' ID',' IL',' IN',' IA',' KS',' KY',' LA',' ME',' MD',' MA',' MI',' MN',' MS',' MO',' MT',' NE',' NV',' NH',' NJ',' NM',' NY',' NC',' ND',' OH',' OK',' OR',' PA',' RI',' SC',' SD',' TN',' TX',' UT',' VT',' VA',' WA',' WV',' WI',' WY',' VI',',AL',',AK',',AZ',',AR',',CA',',CO',',CT',',DE',',DC',',FL',',GA',',HI',',ID',',IL',',IN',',IA',',KS',',KY',',LA',',ME',',MD',',MA',',MI',',MN',',MS',',MO',',MT',',NE',',NV',',NH',',NJ',',NM',',NY',',NC',',ND',',OH',',OK',',OR',',PA',',RI',',SC',',SD',',TN',',TX',',UT',',VT',',VA',',WA',',WV',',WI',',WY',',VI','afb','AFB') then 'United States'
+           when trim(home) in ('California') then 'United States'
+           when trim(home) in ('Indiana') then 'United States'
+           when trim(home) in ('Wyoming') then 'United States'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CN',' ON',' NO',' SA',' BC',',CN',',ON',',NO','SA',',BC') then 'Canada'
+           when substr( trim(home), length(trim(home))-3, length(trim(home)) ) in (' ONT',',ONT') then 'Canada'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' UK',',UK',' LE',',LE') then 'United Kingdom of Great Britain and Northern Ireland'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' PR',',PR') then 'Puerto Rico'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' GE',',GE') then 'Germany'
+           when trim(home) in ('Rep Of S.africa') then 'South Africa'
+           when trim(home) in ('Scotland') then 'United Kingdom of Great Britain and Northern Ireland'
+           when trim(home) in ('NewZealand') then 'New Zealand'
+           when trim(home) in ('Russia') then 'Dominican Republic'
+           when trim(home) in ('Dominican Republi') then 'Russian Federation'
+           when trim(home) in ('Trinidad') then 'Trinidad and Tobago'
+           when trim(home) in ('Tanzania') then 'Tanzania, United Republic of'
+           when trim(home) in ('Bolivia') then 'Bolivia, Plurinational State of'
+           when trim(home) not in ('Australia','Bolivia, Plurinational State of','Brazil','United Kingdom of Great Britain and Northern Ireland','Canada','Colombia','CzechRepublic','DominicanRepubli','DominicanRepublic','Dominican Republic','Czech Republic','South Africa','Puerto Rico','Ethiopia','France','Germany','Guatemala','Ireland','Japan','Kenya','Republic of Korea','Lithuania','Malta','Mexico','Morocco','NewZealand','New Zealand','Peru','Poland','PuertoRico','RepOfS.africa','Romania','Russian Federation','SouthAfrica','Trinidad and Tobago','Ukraine','UnitedKingdom','Uruguay','Tanzania, United Republic of','Slovenia','Jordan','Aruba', 'Angola', 'Aland Islands', 'Andorra', 'Argentina', 'American Samoa', 'French Southern and Antarctic Lands', 'Antigua and Barbuda', 'Austria', 'Burundi', 'Benin', 'Bonaire, Sint Eustatius and Saba', 'Burkina Faso', 'Bulgaria', 'Bahamas', 'Saint Barthelemy', 'Belize', 'Bolivia, Plurinational State of', 'Barbados', 'Bhutan', 'Botswana', 'Canada', 'Switzerland', 'China', 'Ivory Coast', 'Democratic Republic of the Congo', 'Cook Islands', 'Comoros', 'Costa Rica', 'Curacao', 'Cayman Islands', 'Czech Republic', 'Djibouti', 'Denmark', 'Algeria', 'Egypt', 'Western Sahara', 'Spain', 'Ethiopia', 'Fiji', 'France', 'Faroe Islands', 'Gabon', 'Georgia', 'Ghana', 'Guinea', 'Gambia', 'Equatorial Guinea', 'Grenada', 'Guatemala', 'Guam', 'Hong Kong', 'Heard Island and McDonald Islands', 'Croatia', 'Hungary', 'Isle of Man', 'British Indian Ocean Territory', 'Ireland', 'Iraq', 'Israel', 'Jamaica', 'Jordan', 'Kazakhstan', 'Kyrgyzstan', 'Kiribati', 'Saint Kitts and Nevis', 'Kuwait', 'Lebanon', 'Libya', 'Liechtenstein', 'Lesotho', 'Luxembourg', 'Macao', 'Morocco', 'Moldova, Republic of', 'Maldives', 'Marshall Islands', 'Mali', 'Myanmar', 'Mongolia', 'Mozambique', 'Montserrat', 'Mauritius', 'Malaysia', 'Namibia', 'Niger', 'Nigeria', 'Niue', 'Norway', 'Nauru', 'Oman', 'Panama', 'Peru', 'Palau', 'Poland', 'Portugal', 'Paraguay', 'French Polynesia', 'Reunion', 'Russian Federation', 'Saudi Arabia', 'Senegal', 'South Georgia and the South Sandwich Islands', 'Saint Helena, Ascension and Tristan da Cunha', 'Saint Helena, Ascension and Tristan da Cunha', 'Svalbard and Jan Mayen', 'Sierra Leone', 'San Marino', 'Saint Pierre and Miquelon', 'South Sudan', 'Suriname', 'Slovenia', 'Swaziland', 'Seychelles', 'Turks and Caicos Islands', 'Togo', 'Tajikistan', 'Turkmenistan', 'Tonga', 'Trinidad and Tobago', 'Turkey', 'Taiwan', 'Uganda', 'United States Minor Outlying Islands', 'United States', 'Holy See (Vatican City State)', 'Saint Vincent and the Grenadines', 'Virgin Islands, British', 'Vietnam', 'Wallis and Futuna', 'Kosovo', 'South Africa', 'Zimbabwe') then 'United States'
+          else trim(home) end as home,
+          runTime as runTime
+      from cherryblossomX
+      group by home
+      ")
 
-
-# names(cherryblossomX)
-# sqldf("select home, avg(runTime) from cherryblossomX group by home order by avg(runTime) asc")
 
 dat <- iso3166
-
 cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from cherryblossomX x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
 
 map <- ne_countries(scale = "medium", returnclass = "sf")
+
 runners_map <- merge(map, cherryblossom_country_runtimes, by.x = "adm0_a3", by.y = "a3", all = TRUE)
 
 assoc_graph <- ggplot(data = runners_map) +
@@ -769,6 +743,82 @@ assoc_graph <- ggplot(data = runners_map) +
 
 assoc_graph + theme_map()
 
+
+```
+```{r States Map, include= TRUE, warning=F}
+cherryblossomStates = cherryblossom
+
+states_summary_table = sqldf("
+      select 
+      case when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AL',',AL') then 'AL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AK',',AK') then 'AK'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AZ',',AZ') then 'AZ'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AR',',AR') then 'AR'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CA',',CA') then 'CA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CO',',CO') then 'CO'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CT',',CT') then 'CT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' DE',',DE') then 'DE'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' FL',',FL') then 'FL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' GA',',GA') then 'GA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' HI',',HI') then 'HI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ID',',ID') then 'ID'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IL',',IL') then 'IL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IN',',IN') then 'IN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IA',',IA') then 'IA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' KS',',KS') then 'KS'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' KY',',KY') then 'KY'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' LA',',LA') then 'LA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ME',',ME') then 'ME'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MD',',MD') then 'MD'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MA',',MA') then 'MA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MI',',MI') then 'MI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MN',',MN') then 'MN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MS',',MS') then 'MS'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MO',',MO') then 'MO'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MT',',MT') then 'MT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NE',',NE') then 'NE'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NV',',NV') then 'NV'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NH',',NH') then 'NH'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NJ',',NJ') then 'NJ'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NM',',NM') then 'NM'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NY',',NY') then 'NY'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NC',',NC') then 'NC'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ND',',ND') then 'ND'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OH',',OH') then 'OH'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OK',',OK') then 'OK'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OR',',OR') then 'OR'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' PA',',PA') then 'PA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' RI',',RI') then 'RI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' SC',',SC') then 'SC'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' SD',',SD') then 'SD'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' TN',',TN') then 'TN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' TX',',TX') then 'TX'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' UT',',UT') then 'UT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' VT',',VT') then 'VT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' VA',',VA',' VI',',VI') then 'VA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WA',',WA') then 'WA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WV',',WV') then 'WV'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WI',',WI') then 'WI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WY',',WY') then 'WY'
+when trim(home) = 'Wyoming' then 'WY'
+when trim(home) = 'California' then 'CA'
+when trim(home) = 'Indiana' then 'IN'
+          else NULL end as home,
+          runTime as runTime
+      from cherryblossomStates
+      group by home
+      ")
+
+states_summary_table1 = na.omit(states_summary_table)
+#sqldf("select home, count(*) from states_summary_table1 group by home")
+
+cherryblossom_sates_runtimes <- sqldf("select home as state, avg(runTime) as runTime from states_summary_table1 group by state")
+
+plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALSE)   +
+  scale_fill_viridis_c(option = "viridis") + 
+  theme(legend.position = "right") + 
+  theme(panel.background = element_rect(colour = "black")) + 
+  labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State")
 ```
 
 
