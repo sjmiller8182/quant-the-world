@@ -642,6 +642,10 @@ tail(cherryblossom)
 sum(is.na(cherryblossom))
 ```
 
+In preparation for further analysis, the values for 'home' needed to be updated. First, 12 runners were identified as having at least one iteration of a bad address. Based on state codes provided with those addresses, alternative addresses used by those runners in other races were applied in place of the bad addresses.
+
+Additionally, because most of the addresses were not in standard format, we converted home names to ISO standards for national naming. For example, we converted 'Rep Of S.africa' to the iso3166-recognized 'South Africa'. The names were originally given ISO Name values for analysis and reporting, then converted to ISO 3-byte country codes for cross-walking into the map's visual abstraction. All runners with specified nations (whether by ISO code or name) were listed with their nation while all others were listed as 'United States.' For cross-walking locations to states, we identified 7,398 records where a state was given, ending in value such as ' AK',',AK', where 'AK' is 'Alaska'. This information was processed in creating Fig. 2 and Fig. 3.
+
 Our dataset is complete, clean, and ready for further analysis.
 
 ```{r}
@@ -652,18 +656,28 @@ sum(is.na(cherryblossom))
 head(cherryblossom)
 ```
 
+# Results
+As visualized in Fig. 2, Results from analyzing geographic runner information identified that the nations with the fastest run times, represented by average, were from Tanzania, Morocco, Ethiopia, Kenya and Mexico. The nations with the slowest average run times were Ireland, Slovenia, Lebanon, Republic of Korea, and Jordan.
 
-# Conclusion
-Additionally, we identified 12 runners without valid home addresses, which we imputed with valid addresses they had provided in previous races. For these runners, the states (including D.C. as Washington, D.C.) were the same. This was useful when determining race times.
+| Top 5 Fastest Nations | Overall Race Completion Time |
+|------|----------------------------------
+| Tanzania | 46.067 |
+| Morocco | 46.817 |
+| Ethiopia | 46.983 |
+| Kenya | 47.017 |
+| Mexico | 47.317 |
 
-Also, country names were standardized according to iso3166, which was useful for both naming consistency and production of the global map we used for visualizing race completion times.
+| Top 5 Slowest Nations | Overall Race Completion Time |
+|------|----------------------------------|
+| Ireland | 121.42 |
+| Slovenia | 108.25 |
+| Lebanon | 103.95 |
+| Republic of Korea | 100.733 |
+| Jordan | 100.067 |
 
-These webscraping methods proved useful for identifying the times of race completion per runner from year 1999 through 2012. From this information we were able to identify average race completion times, by nation. Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland. With repsect to states, the state with the fastest average run time was Nevada across all years, while the slowest was North Dakota.
-
-```{r Global Map, include= TRUE, warning=F}
+```{r International Results, include= TRUE, warning=F, fig.height=3.5}
 library(pacman)
 p_load(rnaturalearth,rnaturalearthdata,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, maps)
-
 
 cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
 cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Matthew Rogers",]$home = "Arlington VA"
@@ -681,7 +695,6 @@ cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Alissa Havens",]
 
 cherryblossomX = cherryblossom
 cherryblossomX$home = trimws(cherryblossomX$home, "both", "[ \t\r\n]")
-
 
 cherryblossomX[cherryblossomX$home =="AUS",]$home = "Australia"
 cherryblossomX[cherryblossomX$home =="CAN",]$home = "Canada"
@@ -735,9 +748,8 @@ summary_table = sqldf("
       group by home
       ")
 
-
 dat <- iso3166
-cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from cherryblossomX x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
+cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from summary_table x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
 
 map <- ne_countries(scale = "medium", returnclass = "sf")
 
@@ -746,15 +758,35 @@ runners_map <- merge(map, cherryblossom_country_runtimes, by.x = "adm0_a3", by.y
 assoc_graph <- ggplot(data = runners_map) +
   geom_sf(aes(fill = runTime), 
           position = "identity") + 
-  labs(fill='Average\nCompletion Time')  +
+  labs(fill='Average\nCompletion Time', caption = paste(
+      'Figure 2:\n',
+      'Global Race Completion Times', sep=''))  +
   scale_fill_viridis_c(option = "viridis") +
    ggtitle('Average Race Completion Time, by Country')
-
 assoc_graph + theme_map()
 
 
 ```
-```{r States Map, include= TRUE, warning=F}
+
+As visualized in Fig. 3, the states represented by the fastest overall runners - based on average race completion time - are Nevada, Colorado, Delaware, Idaho, and New Mexico. The states with the slowest average race completion times are North Dakota, Kentucky, Hawaii, Oklahoma, and Oregon.
+
+| Top 5 Fastest States | Overall Race Completion Time |
+|------|----------------------------------|
+| Nevada | 76.269 |
+| Colorado | 82.400 |
+| Delaware | 83.019 |
+| Idaho | 83.157 |
+| New Mexico | 83.208 |
+
+| Top 5 Slowest States | Overall Race Completion Time |
+|------|----------------------------------|
+| North Dakota | 109.517 |
+| Kentucky | 98.602 |
+| Hawaii | 98.467 |
+| Oklahoma | 97.837 |
+| Oregon | 97.760 |
+
+```{r National Results, include= TRUE, warning=F, fig.height=3.5}
 cherryblossomStates = cherryblossom
 
 states_summary_table = sqldf("
@@ -827,8 +859,15 @@ plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALS
   scale_fill_viridis_c(option = "viridis") + 
   theme(legend.position = "right") + 
   theme(panel.background = element_rect(colour = "black")) + 
-  labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State")
+  labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State", caption = paste(
+      'Figure 3:\n',
+      'Statewide Race Completion Times', sep=''))
 ```
+
+# Conclusion
+These web-scraping methods proved useful for identifying the times of race completion per runner from year 1999 through 2012. From this information we were able to identify average race completion times, by nation and by state. However, documentation methodology and format varied over the years, which presented issues where data was required to be dropped - often as a result of missing information or incorrect information, such as children as young as 1 competing in the race - which impacted the results we were able to identify. National information was relatively reliable, but the state-level information was heavily under-represented. Because of the level of missing, unrecoverable information, we did not feel statistical analysis would have been useful. Many issues identified would have resulted in over-fitting during predicting modeling or time series (change-points) analysis.
+
+It is important to note that there was perhaps ("perhaps" since we could not confirm exact locations) significant overlap between cities in Canada and the United States where nation and state were not provided. Therefore, race completion times between these two locations may not show as much variation as existed.
 
 
 \appendix
