@@ -83,7 +83,8 @@ knitr::opts_chunk$set(echo = FALSE, include = FALSE, warning = F)
 
 ```{r}
 
-library(XML)
+library(pacman)
+p_load(XML, rnaturalearth,rnaturalearthdata,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, maps)
 ubase = "http://www.cherryblossom.org/"
 menURLs = 
   c("results/1999/cb99m.html", "results/2000/Cb003m.htm", "results/2001/oof_m.html",
@@ -630,7 +631,7 @@ sum(is.na(cherryblossom))
 
 In preparation for further analysis, the values for 'home' needed to be updated. First, 12 runners were identified as having at least one iteration of a bad address. Based on state codes provided with those addresses, alternative addresses used by those runners in other races were applied in place of the bad addresses.
 
-Additionally, because most of the addresses were not in standard format, we converted home names to ISO standards for national naming. For example, we converted 'Rep Of S.africa' to the iso3166-recognized 'South Africa'. The names were originally given ISO Name values for analysis and reporting, then converted to ISO 3-byte country codes for cross-walking into the map's visual abstraction. All runners with specified nations (whether by ISO code or name) were listed with their nation while all others were listed as 'United States.' For cross-walking locations to states, we identified 7,398 records where a state was given, ending in value such as ' AK',',AK', where 'AK' is 'Alaska'. This information was processed in creating Fig. 2 and Fig. 3.
+Additionally, because most of the addresses were not in standard format, we converted home names to ISO standards for national naming. For example, we converted 'Rep Of S.africa' to the iso3166-recognized 'South Africa'. The names were originally given ISO Name values for analysis and reporting, then converted to ISO 3-byte country codes for cross-walking into the map's visual abstraction. All runners with specified nations (whether by ISO code or name) were listed with their nation while all others were listed as 'United States.' For cross-walking locations to states, we identified 7,398 records where a state was given, ending in value such as ' AK',',AK', where 'AK' is 'Alaska'. This information was processed in creating Fig. 1 and Fig. 2.
 
 Our dataset is complete, clean, and ready for further analysis.
 
@@ -643,49 +644,9 @@ head(cherryblossom)
 ```
 
 # Results
-As visualized in Fig. 2, Results from analyzing geographic runner information identified that the nations with the fastest run times, represented by average, were from Tanzania, Morocco, Ethiopia, Kenya and Mexico. The nations with the slowest average run times were Ireland, Slovenia, Lebanon, Republic of Korea, and Jordan.
 
-# Conclusion
-
-## Trends over time
-
-The Cherry Blossom race has experienced growth since the year 2000 as indicated by the linear trend line in the plot below. 
-
-```{r, include = T, message = F}
-just_runTime = cherryblossom[c(1,6)]
-runTime_by_year = aggregate(just_runTime, by = list(just_runTime$year), FUN = mean)
-participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = length)
-
-# linear trend lines
-participation_lm = lm(year ~ Group.1, data = participation)
-runTime_lm = lm(runTime ~ year, data = runTime_by_year)
-library(ggplot2)
-p = ggplot(participation, aes(Group.1, runTime)) + 
-  labs(title = 'Cherry Blossom Race Participation', caption = 'Figure 1: Cherry Blossom race participation with linear trend line') +
-  xlab('Year') + ylab('Number of Participants') +
-  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
-  scale_x_discrete(name = 'Year', limits = c(1999:2012))
-p + geom_line() + geom_point() +
-  geom_line(aes(y= participation_lm$fitted.values), color = 'blue', linetype = 'dotted') 
-```
-
-The average race completion time for all ages and genders has also experienced a positive trend. The correlation between race participation and the average race completion time is 92.78%.
-
-```{r, include = T, message = F}
-p = ggplot(runTime_by_year, aes(year, runTime)) + 
-  labs(title = 'Average Run Time 1999 - 2012', caption = 'Figure 2: Average race finish time with linear trend line') +
-  xlab('Year') + ylab('Average Finish Time (minutes)') +
-  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
-  scale_x_discrete(name = 'Year', limits = c(1999:2012))
-p + geom_line() + geom_point() +
-  geom_line(aes(y = runTime_lm$fitted.values), color = 'blue', linetype = 'dotted')
-```
-```{r}
-cor(runTime_by_year$runTime, participation$runTime)
-```
-
-
-Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland.
+## Race Results by Geographic Location
+As visualized in Fig. 1, Results from analyzing geographic runner information identified that the nations with the fastest run times, represented by average, were from Tanzania, Morocco, Ethiopia, Kenya and Mexico. The nations with the slowest average run times were Ireland, Slovenia, Lebanon, Republic of Korea, and Jordan. 
 
 | Top 5 Fastest Nations | Overall Race Completion Time |
 |------|----------------------------------
@@ -804,7 +765,7 @@ assoc_graph <- ggplot(data = runners_map) +
   geom_sf(aes(fill = runTime), 
           position = "identity") + 
   labs(fill='Average\nCompletion Time', caption = paste(
-      'Figure 2:\n',
+      'Figure 1:\n',
       'Global Race Completion Times', sep=''))  +
   scale_fill_viridis_c(option = "viridis") +
    ggtitle('Average Race Completion Time, by Country')
@@ -812,7 +773,7 @@ assoc_graph <- ggplot(data = runners_map) +
 assoc_graph + theme_map()
 ```
 
-As visualized in Fig. 3, the states represented by the fastest overall runners - based on average race completion time - are Nevada, Colorado, Delaware, Idaho, and New Mexico. The states with the slowest average race completion times are North Dakota, Kentucky, Hawaii, Oklahoma, and Oregon.
+As visualized in Fig. 2, the states represented by the fastest overall runners - based on average race completion time - are Nevada, Colorado, Delaware, Idaho, and New Mexico. The states with the slowest average race completion times are North Dakota, Kentucky, Hawaii, Oklahoma, and Oregon.
 
 | Top 5 Fastest States | Overall Race Completion Time |
 |------|----------------------------------|
@@ -905,18 +866,53 @@ plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALS
   theme(legend.position = "right") + 
   theme(panel.background = element_rect(colour = "black")) + 
   labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State", caption = paste(
-      'Figure 3:\n',
+      'Figure 2:\n',
       'Statewide Race Completion Times', sep=''))
 ```
 
+## Trends over time
+
+The Cherry Blossom race has experienced growth since the year 2000 as indicated by the linear trend line in Fig. 3, below.
+
+```{r, include = T, message = F, fig.height=3.5}
+just_runTime = cherryblossom[c(1,6)]
+runTime_by_year = aggregate(just_runTime, by = list(just_runTime$year), FUN = mean)
+participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = length)
+
+# linear trend lines
+participation_lm = lm(year ~ Group.1, data = participation)
+runTime_lm = lm(runTime ~ year, data = runTime_by_year)
+library(ggplot2)
+p = ggplot(participation, aes(Group.1, runTime)) + 
+  labs(title = 'Cherry Blossom Race Participation', caption = 'Figure 3: Cherry Blossom race participation with linear trend line') +
+  xlab('Year') + ylab('Number of Participants') +
+  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
+  scale_x_discrete(name = 'Year', limits = c(1999:2012))
+p + geom_line() + geom_point() +
+  geom_line(aes(y= participation_lm$fitted.values), color = 'blue', linetype = 'dotted') 
+```
+
+\pagebreak
+
+The average race completion time for all ages and genders has also experienced a positive trend. The correlation between race participation and the average race completion time is 92.78%. This is indicated in Fig. 4, below.
+
+```{r, include = T, message = F, fig.height=3.5}
+p = ggplot(runTime_by_year, aes(year, runTime)) + 
+  labs(title = 'Average Run Time 1999 - 2012', caption = 'Figure 4: Average race finish time with linear trend line') +
+  xlab('Year') + ylab('Average Finish Time (minutes)') +
+  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
+  scale_x_discrete(name = 'Year', limits = c(1999:2012))
+p + geom_line() + geom_point() +
+  geom_line(aes(y = runTime_lm$fitted.values), color = 'blue', linetype = 'dotted')
+```
+```{r}
+cor(runTime_by_year$runTime, participation$runTime)
+```
+
 # Conclusion
-These web-scraping methods proved useful for identifying the times of race completion per runner from year 1999 through 2012. From this information we were able to identify average race completion times, by nation and by state. However, documentation methodology and format varied over the years, which presented issues where data was required to be dropped - often as a result of missing information or incorrect information, such as children as young as 1 competing in the race - which impacted the results we were able to identify. National information was relatively reliable, but the state-level information was heavily under-represented. Because of the level of missing, unrecoverable information, we did not feel statistical analysis would have been useful. Many issues identified would have resulted in over-fitting during predicting modeling or time series (change-points) analysis.
+These web-scraping methods proved useful for identifying the times of race completion per runner from year 1999 through 2012. From this information we were able to identify average race completion times, by nation and by state. However, documentation methodology and format varied over the years, which presented issues where data was required to be dropped - often as a result of missing information or incorrect information, such as children as young as 1 competing in the race - which impacted the results we were able to identify. National information was relatively reliable, but the state-level information was heavily under-represented. 
 
-It is important to note that there was perhaps ("perhaps" since we could not confirm exact locations) significant overlap between cities in Canada and the United States where nation and state were not provided. Therefore, race completion times between these two locations may not show as much variation as existed.
-
-
-
-
+Because of the level of missing, unrecoverable information, we did not feel inferential analysis based on geographic location would have been useful. However, linear trajectory analysis proved useful when assessing racer count data over time; there is a clear indication race popularity - at least from the measure of race participant count - increased over the time spanning 1999 to 2012. Although with larger variance along the mean over time, there still appears to be a strong indication race completion time - measured in minutes - has also been increasing over time. That is, to say, during the same time period racer participation increased, race completion time increased as well.
 
 \appendix
 
