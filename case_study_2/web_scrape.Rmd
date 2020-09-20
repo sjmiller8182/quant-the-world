@@ -645,6 +645,44 @@ head(cherryblossom)
 
 
 # Conclusion
+
+## Trends over time
+
+The Cherry Blossom race has experienced growth since the year 2000 as indicated by the linear trend line in the plot below. 
+```{r, inlcude = T}
+just_runTime = cherryblossom[c(1,6)]
+runTime_by_year = aggregate(just_runTime, by = list(just_runTime$year), FUN = mean)
+participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = length)
+
+# linear trend lines
+participation_lm = lm(year ~ Group.1, data = participation)
+runTime_lm = lm(year ~ runTime, data = runTime_by_year)
+
+p = ggplot(participation, aes(Group.1, runTime)) + 
+  labs(title = 'Cherry Blossom Race Participation', caption = 'Figure 2: Cherry Blossom race participation with linear trend line') +
+  xlab('Year') + ylab('Number of Participants') +
+  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
+  scale_x_discrete(name = 'Year', limits = c(1999:2012))
+p + geom_line() + geom_point() +
+  geom_line(aes(y= participation_lm$fitted.values), color = 'blue', linetype = 'dotted') 
+```
+
+The average race completion time for all ages and genders has also experienced a positive trend. The correlation between race participation and the average race completion time is 92.78%.
+
+```{r, inlcude = T}
+p = ggplot(runTime_by_year, aes(year, runTime)) + 
+  labs(title = 'Average Run Time 1999 - 2012', caption = 'Figure 1 : Average race finish time with linear trend line') +
+  xlab('Year') + ylab('Average Finish Time (minutes)') +
+  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
+  scale_x_discrete(name = 'Year', limits = c(1999:2012))
+p + geom_line() + geom_point() +
+  geom_line(aes(y = runTime_lm$fitted.values), color = 'blue', linetype = 'dotted')
+```
+```{r}
+cor(runTime_by_year$runTime, participation$runTime)
+```
+
+
 Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland.
 
 ```{r}
@@ -770,6 +808,9 @@ assoc_graph <- ggplot(data = runners_map) +
 assoc_graph + theme_map()
 
 ```
+
+
+
 
 
 \appendix
