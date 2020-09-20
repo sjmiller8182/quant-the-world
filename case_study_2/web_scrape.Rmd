@@ -26,8 +26,12 @@ editor_options:
 
 # Introduction
 
-The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle. In this case study we collect data on participates of the Cherry Blossom Race from the Cherry Blossom Race website\footnotemark.
-We find that there are a number of issues present in the data, including inconssitent web addressing formatting, inconsistent formatting, and missing data. We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
+The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle. 
+In this case study we collect data on participants of the Cherry Blossom Race from the event website\footnotemark.
+We find that there are a number of issues present in the data, 
+ including inconsistent web addressing formatting, inconsistent formatting, and missing data. 
+We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
+
 
 \footnotetext{See http://www.cherryblossom.org/.}
 
@@ -47,7 +51,7 @@ http://www.cherryblossom.org/results/<year>/<page>
 
 The specific addresses where the data is stored are given in table 1. While the structure follows `results/<year>` consistently, the page naming for each year is not consistent. In some cases, the names for the men's and women's pages are `men` and `women`, repectively. In other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
 \newpage
-**Table 1. Web Page Pages**
+**Table 1. Web Pages**
 
 | Year | Men's Pages                      | Women's Pages             |
 |------|----------------------------------|---------------------------|
@@ -69,6 +73,13 @@ The specific addresses where the data is stored are given in table 1. While the 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, include = FALSE)
 ```
+
+### Data Cleaning
+
+\small
+*This section refers to code in Appendix A*
+
+\normalsize
 
 ```{r}
 
@@ -142,8 +153,8 @@ save(menTables, file = "CBMenTextTables.rda")
 
 The data are successfully scraped from the urls that are given and we observe that the number of participants in the Cherry Blossom race has increased steadily from 1999 to 2012. We can use the `extractResTable` function to exptract all of the results, or to specify a single set of results.
 
-\tiny
-```{r, echo = TRUE, inlcude = FALSE}
+
+```{r, echo = TRUE, inlcude = T, results='asis'}
 men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
 men_2009[1:10]
 ```
@@ -180,11 +191,9 @@ headerRow
 ```{r, inlcude = FALSE, results= 'hide'}
 # looks for first match of given sequence
 ageStart<- regexec('ag', headerRow, fixed = TRUE)
-ageStart
+#ageStart
 ```
- "        1         1/1420             1 Ridouane Harroufi           27 Morocco                               45:56     45:56#   4:36 " 
- 
- "        27 " "           " "           " "       26 M" "        26 " "     23 Ken"
+
 ```{r}
 age<- substr(body, start = 49, stop = 50)
 head(age)
@@ -633,6 +642,10 @@ tail(cherryblossom)
 sum(is.na(cherryblossom))
 ```
 
+In preparation for further analysis, the values for 'home' needed to be updated. First, 12 runners were identified as having at least one iteration of a bad address. Based on state codes provided with those addresses, alternative addresses used by those runners in other races were applied in place of the bad addresses.
+
+Additionally, because most of the addresses were not in standard format, we converted home names to ISO standards for national naming. For example, we converted 'Rep Of S.africa' to the iso3166-recognized 'South Africa'. The names were originally given ISO Name values for analysis and reporting, then converted to ISO 3-byte country codes for cross-walking into the map's visual abstraction. All runners with specified nations (whether by ISO code or name) were listed with their nation while all others were listed as 'United States.' For cross-walking locations to states, we identified 7,398 records where a state was given, ending in value such as ' AK',',AK', where 'AK' is 'Alaska'. This information was processed in creating Fig. 2 and Fig. 3.
+
 Our dataset is complete, clean, and ready for further analysis.
 
 ```{r}
@@ -643,7 +656,10 @@ sum(is.na(cherryblossom))
 head(cherryblossom)
 ```
 
+# Results
+As visualized in Fig. 2, Results from analyzing geographic runner information identified that the nations with the fastest run times, represented by average, were from Tanzania, Morocco, Ethiopia, Kenya and Mexico. The nations with the slowest average run times were Ireland, Slovenia, Lebanon, Republic of Korea, and Jordan.
 
+<<<<<<< HEAD
 # Conclusion
 
 ## Trends over time
@@ -685,129 +701,232 @@ cor(runTime_by_year$runTime, participation$runTime)
 
 Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland.
 
-```{r}
-library(pacman)
-p_load(rnaturalearth,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, gdata, maps)
+| Top 5 Fastest Nations | Overall Race Completion Time |
+|------|----------------------------------
+| Tanzania | 46.067 |
+| Morocco | 46.817 |
+| Ethiopia | 46.983 |
+| Kenya | 47.017 |
+| Mexico | 47.317 |
 
-cherryblossom[gdata::trim(cherryblossom$name)=="Matthew Rogers",]$home = "Arlington VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Adri Jayaratne",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Marla Hallacy",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Eleanor Rathbone",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Emily Naden",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Grace L Chen",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Stephanie Rogers",]$home = "Aldie VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Sarah Garner",]$home = "	Arlington VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Maria Solomon",]$home = "Arlington VA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Amy Iacopi",]$home = "San Francisco CA"
-cherryblossom[gdata::trim(cherryblossom$name)=="Sarah Watkins",]$home = "Washington DC"
-cherryblossom[gdata::trim(cherryblossom$name)=="Alissa Havens",]$home = "Washington DC"
+
+| Top 5 Slowest Nations | Overall Race Completion Time |
+|------|----------------------------------|
+| Ireland | 121.42 |
+| Slovenia | 108.25 |
+| Lebanon | 103.95 |
+| Republic of Korea | 100.733 |
+| Jordan | 100.067 |
+
+```{r International Results, include= TRUE, warning=F, fig.height=3.5}
+library(pacman)
+# loading all packages. The first 3 are for ISO codes and the usmap and map are for the literal maps
+# also loading sqldf. Because of the volume of the data, sqldf was extremely faster than updating with conditionals in a for-loop;
+# the time difference was roughly 5 seconds (sqldf) vs. 5 minutes (conditional for-loop)
+p_load(rnaturalearth,rnaturalearthdata,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, maps)
+
+# These runners were all missing locations or had bad locations. We replaced them with what they had listed on file
+# from previous races:
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Matthew Rogers",]$home = "Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Adri Jayaratne",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Eleanor Rathbone",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Emily Naden",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Grace L Chen",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Stephanie Rogers",]$home = "Aldie VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Sarah Garner",]$home = "	Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Maria Solomon",]$home = "Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Amy Iacopi",]$home = "San Francisco CA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Sarah Watkins",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Alissa Havens",]$home = "Washington DC"
 
 cherryblossomX = cherryblossom
+# the home column needed leading and trailing trimming
+cherryblossomX$home = trimws(cherryblossomX$home, "both", "[ \t\r\n]")
 
-cherryblossomX[gdata::trim(cherryblossomX$home)=="AUS",]$home = "Australia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Bri",]$home = "United Kingdom of Great Britain and Northern Ireland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="CAN",]$home = "Canada"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="COL",]$home = "Colombia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="CZE",]$home = "Czech Republic"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="ETH",]$home = "Ethiopia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Eth",]$home = "Ethiopia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Fra",]$home = "France"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="GER",]$home = "Germany"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="IRE",]$home = "Ireland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="JAP",]$home = "Japan"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="KEN",]$home = "Kenya"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="KOR",]$home = "Republic of Korea"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Ken",]$home = "Kenya"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="LIT",]$home = "Lithuania"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="MEX",]$home = "Mexico"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Mex",]$home = "Mexico"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Ny",]$home = "United States"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="MD",]$home = "United States"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="PER",]$home = "Peru"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="POL",]$home = "Poland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="RSA",]$home = "South Africa"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="ROM",]$home = "Romania"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="RUS",]$home = "Russia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Rom",]$home = "Romania"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Rus",]$home = "Russia"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="SCO",]$home = "United Kingdom of Great Britain and Northern Ireland"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Us",]$home = "United States"
-cherryblossomX[gdata::trim(cherryblossomX$home)=="Usa",]$home = "United States"
+# Standardizing countries to names where only codes were present. Although we revert them to codes for mapping,
+# it is easier to work with the countries by name when coding
+cherryblossomX[cherryblossomX$home =="AUS",]$home = "Australia"
+cherryblossomX[cherryblossomX$home =="CAN",]$home = "Canada"
+cherryblossomX[cherryblossomX$home =="COL",]$home = "Colombia"
+cherryblossomX[cherryblossomX$home =="CZE",]$home = "Czech Republic"
+cherryblossomX[cherryblossomX$home =="Fra",]$home = "France"
+cherryblossomX[cherryblossomX$home =="GER",]$home = "Germany"
+cherryblossomX[cherryblossomX$home =="IRE",]$home = "Ireland"
+cherryblossomX[cherryblossomX$home =="JAP",]$home = "Japan"
+cherryblossomX[cherryblossomX$home =="KOR",]$home = "Republic of Korea"
+cherryblossomX[cherryblossomX$home =="LIT",]$home = "Lithuania"
+cherryblossomX[cherryblossomX$home =="PER",]$home = "Peru"
+cherryblossomX[cherryblossomX$home =="POL",]$home = "Poland"
+cherryblossomX[cherryblossomX$home =="RSA",]$home = "South Africa"
 
+cherryblossomX[cherryblossomX$home %in% c("ETH","Eth"),]$home = "Ethiopia"
+cherryblossomX[cherryblossomX$home %in% c("KEN","Ken"),]$home = "Kenya"
+cherryblossomX[cherryblossomX$home %in% c("MEX","Mex"),]$home = "Mexico"
+cherryblossomX[cherryblossomX$home %in% c("RUS","Rus"),]$home = "Russian Federation"
+cherryblossomX[cherryblossomX$home %in% c("ROM","Rom"),]$home = "Romania"
+cherryblossomX[cherryblossomX$home %in% c("Us","Usa","Ny","MD"),]$home = "United States"
+cherryblossomX[cherryblossomX$home %in% c("Bri","SCO"),]$home = "United Kingdom of Great Britain and Northern Ireland"
+
+# dropping non-locational values
 dropVars <- c("", "Lee","M")
-cherryblossomX <- cherryblossomX[!(gdata::trim(cherryblossomX$home) %in% dropVars ),]
+cherryblossomX <- cherryblossomX[!(cherryblossomX$home %in% dropVars ),]
 
-for(i in 1:length(cherryblossomX$home)){
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','VI')){
-    cherryblossomX$home[i] <- 'United States'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-2, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('afb','AFB')){
-    cherryblossomX$home[i] <- 'United States'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-2, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('ONT')){
-    cherryblossomX$home[i] <- 'Canada'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('UK','LE')){
-    cherryblossomX$home[i] <- 'United Kingdom of Great Britain and Northern Ireland'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('CN','ON','NO','SA','BC')){ # Ontario, Nova Scotia, Seskatchewan, British Colombia
-    cherryblossomX$home[i] <- 'Canada'
-  }
-  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% 'PR'){
-    cherryblossomX$home[i] <- 'Puerto Rico'
-  }
-    if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% 'GE'){
-    cherryblossomX$home[i] <- 'Germany'
-    }
-  if(trim(cherryblossomX$home[i]) %in% 'Rep Of S.africa'){
-    cherryblossomX$home[i] <- 'South Africa'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Dominican Republi'){
-    cherryblossomX$home[i] <- 'Dominican Republic'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Scotland'){
-    cherryblossomX$home[i] <- 'United Kingdom of Great Britain and Northern Ireland'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'NewZealand'){
-    cherryblossomX$home[i] <- 'New Zealand'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Russia'){
-    cherryblossomX$home[i] <- 'Russian Federation'
-  }
-  if(trim(cherryblossomX$home[i]) %in% 'Tanzania'){
-    cherryblossomX$home[i] <- 'Tanzania, United Republic of'
-  }
-  else{
-    if(!gdata::trim(cherryblossomX$home[i]) %in% c('Australia','Bolivia, Plurinational State of','Brazil','United Kingdom of Great Britain and Northern Ireland','Canada','Colombia','CzechRepublic','DominicanRepubli','DominicanRepublic','Dominican Republic','Czech Republic','South Africa','Puerto Rico','Ethiopia','France','Germany','Guatemala','Ireland','Japan','Kenya','Republic of Korea','Lithuania','Malta','Mexico','Morocco','NewZealand','New Zealand','Peru','Poland','PuertoRico','RepOfS.africa','Romania','Russia','Russian Federation','SouthAfrica','Trinidad and Tobago','Ukraine','UnitedKingdom','Uruguay','Tanzania, United Republic of','Slovenia')){
-      cherryblossomX$home[i] <- 'United States'
-    }
-  }
-}
-```
-```{r, include = T}
-cherryblossomX$home <- gdata::trim(cherryblossomX$home)
+# Under the assumption US states have either leading spaces or commas (such as in Phoenix AZ/Phoenix,AZ/Phoenix, AZ for example),
+# We recode states to 'United States' as follows in the SQL below. Also, Canadian states are recoded to 'Canada' in addition to
+# the remaining nations being recoded to ISO standards. These were identified through manual, direct analysis. In the UK, one location
+# with a code of LE was given for a city in Leicestershire. Finally, all remaining countries in the ISO list are provided and those not
+# included are recorded to United States as it was specified in the documentation that American cities were not included with a national
+# location (they, at best, included only state codes)
+summary_table = sqldf("
+      select 
+      case when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AL',' AK',' AZ',' AR',' CA',' CO',' CT',' DE',' DC',' FL',' GA',' HI',' ID',' IL',' IN',' IA',' KS',' KY',' LA',' ME',' MD',' MA',' MI',' MN',' MS',' MO',' MT',' NE',' NV',' NH',' NJ',' NM',' NY',' NC',' ND',' OH',' OK',' OR',' PA',' RI',' SC',' SD',' TN',' TX',' UT',' VT',' VA',' WA',' WV',' WI',' WY',' VI',',AL',',AK',',AZ',',AR',',CA',',CO',',CT',',DE',',DC',',FL',',GA',',HI',',ID',',IL',',IN',',IA',',KS',',KY',',LA',',ME',',MD',',MA',',MI',',MN',',MS',',MO',',MT',',NE',',NV',',NH',',NJ',',NM',',NY',',NC',',ND',',OH',',OK',',OR',',PA',',RI',',SC',',SD',',TN',',TX',',UT',',VT',',VA',',WA',',WV',',WI',',WY',',VI','afb','AFB') then 'United States'
+           when trim(home) in ('California') then 'United States'
+           when trim(home) in ('Indiana') then 'United States'
+           when trim(home) in ('Wyoming') then 'United States'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CN',' ON',' NO',' SA',' BC',',CN',',ON',',NO','SA',',BC') then 'Canada'
+           when substr( trim(home), length(trim(home))-3, length(trim(home)) ) in (' ONT',',ONT') then 'Canada'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' UK',',UK',' LE',',LE') then 'United Kingdom of Great Britain and Northern Ireland'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' PR',',PR') then 'Puerto Rico'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' GE',',GE') then 'Germany'
+           when trim(home) in ('Rep Of S.africa') then 'South Africa'
+           when trim(home) in ('Scotland') then 'United Kingdom of Great Britain and Northern Ireland'
+           when trim(home) in ('NewZealand') then 'New Zealand'
+           when trim(home) in ('Russia') then 'Dominican Republic'
+           when trim(home) in ('Dominican Republi') then 'Russian Federation'
+           when trim(home) in ('Trinidad') then 'Trinidad and Tobago'
+           when trim(home) in ('Tanzania') then 'Tanzania, United Republic of'
+           when trim(home) in ('Bolivia') then 'Bolivia, Plurinational State of'
+           when trim(home) not in ('Australia','Bolivia, Plurinational State of','Brazil','United Kingdom of Great Britain and Northern Ireland','Canada','Colombia','CzechRepublic','DominicanRepubli','DominicanRepublic','Dominican Republic','Czech Republic','South Africa','Puerto Rico','Ethiopia','France','Germany','Guatemala','Ireland','Japan','Kenya','Republic of Korea','Lithuania','Malta','Mexico','Morocco','NewZealand','New Zealand','Peru','Poland','PuertoRico','RepOfS.africa','Romania','Russian Federation','SouthAfrica','Trinidad and Tobago','Ukraine','UnitedKingdom','Uruguay','Tanzania, United Republic of','Slovenia','Jordan','Aruba', 'Angola', 'Aland Islands', 'Andorra', 'Argentina', 'American Samoa', 'French Southern and Antarctic Lands', 'Antigua and Barbuda', 'Austria', 'Burundi', 'Benin', 'Bonaire, Sint Eustatius and Saba', 'Burkina Faso', 'Bulgaria', 'Bahamas', 'Saint Barthelemy', 'Belize', 'Bolivia, Plurinational State of', 'Barbados', 'Bhutan', 'Botswana', 'Canada', 'Switzerland', 'China', 'Ivory Coast', 'Democratic Republic of the Congo', 'Cook Islands', 'Comoros', 'Costa Rica', 'Curacao', 'Cayman Islands', 'Czech Republic', 'Djibouti', 'Denmark', 'Algeria', 'Egypt', 'Western Sahara', 'Spain', 'Ethiopia', 'Fiji', 'France', 'Faroe Islands', 'Gabon', 'Georgia', 'Ghana', 'Guinea', 'Gambia', 'Equatorial Guinea', 'Grenada', 'Guatemala', 'Guam', 'Hong Kong', 'Heard Island and McDonald Islands', 'Croatia', 'Hungary', 'Isle of Man', 'British Indian Ocean Territory', 'Ireland', 'Iraq', 'Israel', 'Jamaica', 'Jordan', 'Kazakhstan', 'Kyrgyzstan', 'Kiribati', 'Saint Kitts and Nevis', 'Kuwait', 'Lebanon', 'Libya', 'Liechtenstein', 'Lesotho', 'Luxembourg', 'Macao', 'Morocco', 'Moldova, Republic of', 'Maldives', 'Marshall Islands', 'Mali', 'Myanmar', 'Mongolia', 'Mozambique', 'Montserrat', 'Mauritius', 'Malaysia', 'Namibia', 'Niger', 'Nigeria', 'Niue', 'Norway', 'Nauru', 'Oman', 'Panama', 'Peru', 'Palau', 'Poland', 'Portugal', 'Paraguay', 'French Polynesia', 'Reunion', 'Russian Federation', 'Saudi Arabia', 'Senegal', 'South Georgia and the South Sandwich Islands', 'Saint Helena, Ascension and Tristan da Cunha', 'Saint Helena, Ascension and Tristan da Cunha', 'Svalbard and Jan Mayen', 'Sierra Leone', 'San Marino', 'Saint Pierre and Miquelon', 'South Sudan', 'Suriname', 'Slovenia', 'Swaziland', 'Seychelles', 'Turks and Caicos Islands', 'Togo', 'Tajikistan', 'Turkmenistan', 'Tonga', 'Trinidad and Tobago', 'Turkey', 'Taiwan', 'Uganda', 'United States Minor Outlying Islands', 'United States', 'Holy See (Vatican City State)', 'Saint Vincent and the Grenadines', 'Virgin Islands, British', 'Vietnam', 'Wallis and Futuna', 'Kosovo', 'South Africa', 'Zimbabwe') then 'United States'
+          else trim(home) end as home,
+          runTime as runTime
+      from cherryblossomX
+      group by home
+      ")
 
-
-# names(cherryblossomX)
-# sqldf("select home, avg(runTime) from cherryblossomX group by home order by avg(runTime) asc")
-
+# getting the ISO codes from package 'maps'
 dat <- iso3166
-
-cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from cherryblossomX x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
+cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from summary_table x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
 
 map <- ne_countries(scale = "medium", returnclass = "sf")
+# Joining cross-walked ISO names to the map through the code names
 runners_map <- merge(map, cherryblossom_country_runtimes, by.x = "adm0_a3", by.y = "a3", all = TRUE)
 
+# global map
 assoc_graph <- ggplot(data = runners_map) +
   geom_sf(aes(fill = runTime), 
           position = "identity") + 
-  labs(fill='Average\nCompletion Time')  +
+  labs(fill='Average\nCompletion Time', caption = paste(
+      'Figure 2:\n',
+      'Global Race Completion Times', sep=''))  +
   scale_fill_viridis_c(option = "viridis") +
    ggtitle('Average Race Completion Time, by Country')
 
 assoc_graph + theme_map()
-
 ```
+
+As visualized in Fig. 3, the states represented by the fastest overall runners - based on average race completion time - are Nevada, Colorado, Delaware, Idaho, and New Mexico. The states with the slowest average race completion times are North Dakota, Kentucky, Hawaii, Oklahoma, and Oregon.
+
+| Top 5 Fastest States | Overall Race Completion Time |
+|------|----------------------------------|
+| Nevada | 76.269 |
+| Colorado | 82.400 |
+| Delaware | 83.019 |
+| Idaho | 83.157 |
+| New Mexico | 83.208 |
+
+| Top 5 Slowest States | Overall Race Completion Time |
+|------|----------------------------------|
+| North Dakota | 109.517 |
+| Kentucky | 98.602 |
+| Hawaii | 98.467 |
+| Oklahoma | 97.837 |
+| Oregon | 97.760 |
+
+```{r National Results, include= TRUE, warning=F, fig.height=3.5}
+cherryblossomStates = cherryblossom
+
+# Recoding the states to a unified location.
+states_summary_table = sqldf("
+      select 
+      case when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AL',',AL') then 'AL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AK',',AK') then 'AK'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AZ',',AZ') then 'AZ'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AR',',AR') then 'AR'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CA',',CA') then 'CA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CO',',CO') then 'CO'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CT',',CT') then 'CT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' DE',',DE') then 'DE'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' FL',',FL') then 'FL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' GA',',GA') then 'GA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' HI',',HI') then 'HI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ID',',ID') then 'ID'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IL',',IL') then 'IL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IN',',IN') then 'IN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IA',',IA') then 'IA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' KS',',KS') then 'KS'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' KY',',KY') then 'KY'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' LA',',LA') then 'LA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ME',',ME') then 'ME'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MD',',MD') then 'MD'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MA',',MA') then 'MA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MI',',MI') then 'MI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MN',',MN') then 'MN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MS',',MS') then 'MS'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MO',',MO') then 'MO'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MT',',MT') then 'MT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NE',',NE') then 'NE'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NV',',NV') then 'NV'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NH',',NH') then 'NH'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NJ',',NJ') then 'NJ'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NM',',NM') then 'NM'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NY',',NY') then 'NY'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NC',',NC') then 'NC'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ND',',ND') then 'ND'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OH',',OH') then 'OH'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OK',',OK') then 'OK'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OR',',OR') then 'OR'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' PA',',PA') then 'PA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' RI',',RI') then 'RI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' SC',',SC') then 'SC'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' SD',',SD') then 'SD'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' TN',',TN') then 'TN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' TX',',TX') then 'TX'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' UT',',UT') then 'UT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' VT',',VT') then 'VT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' VA',',VA',' VI',',VI') then 'VA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WA',',WA') then 'WA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WV',',WV') then 'WV'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WI',',WI') then 'WI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WY',',WY') then 'WY'
+when trim(home) = 'Wyoming' then 'WY'
+when trim(home) = 'California' then 'CA'
+when trim(home) = 'Indiana' then 'IN'
+          else NULL end as home,
+          runTime as runTime
+      from cherryblossomStates
+      group by home
+      ")
+
+states_summary_table1 = na.omit(states_summary_table)
+
+cherryblossom_sates_runtimes <- sqldf("select home as state, avg(runTime) as runTime from states_summary_table1 group by state")
+
+# plotting the state-wide data. The only requirement is that the states have a column name 'state' filled with only the abbreviaitons
+plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALSE)   +
+  scale_fill_viridis_c(option = "viridis") + 
+  theme(legend.position = "right") + 
+  theme(panel.background = element_rect(colour = "black")) + 
+  labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State", caption = paste(
+      'Figure 3:\n',
+      'Statewide Race Completion Times', sep=''))
+```
+
+# Conclusion
+These web-scraping methods proved useful for identifying the times of race completion per runner from year 1999 through 2012. From this information we were able to identify average race completion times, by nation and by state. However, documentation methodology and format varied over the years, which presented issues where data was required to be dropped - often as a result of missing information or incorrect information, such as children as young as 1 competing in the race - which impacted the results we were able to identify. National information was relatively reliable, but the state-level information was heavily under-represented. Because of the level of missing, unrecoverable information, we did not feel statistical analysis would have been useful. Many issues identified would have resulted in over-fitting during predicting modeling or time series (change-points) analysis.
+
+It is important to note that there was perhaps ("perhaps" since we could not confirm exact locations) significant overlap between cities in Canada and the United States where nation and state were not provided. Therefore, race completion times between these two locations may not show as much variation as existed.
 
 
 
