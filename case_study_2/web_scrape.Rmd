@@ -339,8 +339,6 @@ age = sapply(menResMat,
 
 ```
 
-
-
 ```{r, include = TRUE}
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
@@ -494,8 +492,6 @@ tail(timePieces)
 timePieces = sapply(timePieces, as.numeric)
 head(timePieces)
 ```
-
-
 
 ```{r}
 runTime = sapply(timePieces, 
@@ -659,13 +655,12 @@ head(cherryblossom)
 # Results
 As visualized in Fig. 2, Results from analyzing geographic runner information identified that the nations with the fastest run times, represented by average, were from Tanzania, Morocco, Ethiopia, Kenya and Mexico. The nations with the slowest average run times were Ireland, Slovenia, Lebanon, Republic of Korea, and Jordan.
 
-<<<<<<< HEAD
 # Conclusion
 
 ## Trends over time
 
 The Cherry Blossom race has experienced growth since the year 2000 as indicated by the linear trend line in the plot below. 
-```{r, inlcude = T}
+```{r, include = T}
 just_runTime = cherryblossom[c(1,6)]
 runTime_by_year = aggregate(just_runTime, by = list(just_runTime$year), FUN = mean)
 participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = length)
@@ -673,7 +668,7 @@ participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = leng
 # linear trend lines
 participation_lm = lm(year ~ Group.1, data = participation)
 runTime_lm = lm(year ~ runTime, data = runTime_by_year)
-
+library(ggplot2)
 p = ggplot(participation, aes(Group.1, runTime)) + 
   labs(title = 'Cherry Blossom Race Participation', caption = 'Figure 2: Cherry Blossom race participation with linear trend line') +
   xlab('Year') + ylab('Number of Participants') +
@@ -685,7 +680,7 @@ p + geom_line() + geom_point() +
 
 The average race completion time for all ages and genders has also experienced a positive trend. The correlation between race participation and the average race completion time is 92.78%.
 
-```{r, inlcude = T}
+```{r, include = T}
 p = ggplot(runTime_by_year, aes(year, runTime)) + 
   labs(title = 'Average Run Time 1999 - 2012', caption = 'Figure 1 : Average race finish time with linear trend line') +
   xlab('Year') + ylab('Average Finish Time (minutes)') +
