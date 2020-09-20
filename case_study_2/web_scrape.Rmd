@@ -26,8 +26,12 @@ editor_options:
 
 # Introduction
 
-The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle. In this case study we collect data on participates of the Cherry Blossom Race from the Cherry Blossom Race website\footnotemark.
-We find that there are a number of issues present in the data, including inconssitent web addressing formatting, inconsistent formatting, and missing data. We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
+The internet is a vast open resource for data, but internet data can be messy and difficult to wrangle. 
+In this case study we collect data on participants of the Cherry Blossom Race from the event website\footnotemark.
+We find that there are a number of issues present in the data, 
+ including inconsistent web addressing formatting, inconsistent formatting, and missing data. 
+We collect and clean this data to provide the Men's and Women's information in a format suitable for analysis.
+
 
 \footnotetext{See http://www.cherryblossom.org/.}
 
@@ -47,7 +51,7 @@ http://www.cherryblossom.org/results/<year>/<page>
 
 The specific addresses where the data is stored are given in table 1. While the structure follows `results/<year>` consistently, the page naming for each year is not consistent. In some cases, the names for the men's and women's pages are `men` and `women`, repectively. In other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
 \newpage
-**Table 1. Web Page Pages**
+**Table 1. Web Pages**
 
 | Year | Men's Pages                      | Women's Pages             |
 |------|----------------------------------|---------------------------|
@@ -69,6 +73,13 @@ The specific addresses where the data is stored are given in table 1. While the 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, include = FALSE)
 ```
+
+### Data Cleaning
+
+\small
+*This section refers to code in Appendix A*
+
+\normalsize
 
 ```{r}
 
@@ -142,8 +153,8 @@ save(menTables, file = "CBMenTextTables.rda")
 
 The data are successfully scraped from the urls that are given and we observe that the number of participants in the Cherry Blossom race has increased steadily from 1999 to 2012. We can use the `extractResTable` function to exptract all of the results, or to specify a single set of results.
 
-\tiny
-```{r, echo = TRUE, inlcude = FALSE}
+
+```{r, echo = TRUE, inlcude = T, results='asis'}
 men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
 men_2009[1:10]
 ```
@@ -180,11 +191,9 @@ headerRow
 ```{r, inlcude = FALSE, results= 'hide'}
 # looks for first match of given sequence
 ageStart<- regexec('ag', headerRow, fixed = TRUE)
-ageStart
+#ageStart
 ```
- "        1         1/1420             1 Ridouane Harroufi           27 Morocco                               45:56     45:56#   4:36 " 
- 
- "        27 " "           " "           " "       26 M" "        26 " "     23 Ken"
+
 ```{r}
 age<- substr(body, start = 49, stop = 50)
 head(age)
