@@ -46,7 +46,7 @@ http://www.cherryblossom.org/results/<year>/<page>
 ```
 
 The specific addresses where the data is stored are given in table 1. While the structure follows `results/<year>` consistently, the page naming for each year is not consistent. In some cases, the names for the men's and women's pages are `men` and `women`, repectively. In other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
-
+\newpage
 **Table 1. Web Page Pages**
 
 | Year | Men's Pages                      | Women's Pages             |
@@ -67,7 +67,7 @@ The specific addresses where the data is stored are given in table 1. While the 
 | 2012 | `results/2012/2012cucb10m-m.htm` | `results/2012/2012cucb10m-F.htm` |
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, include = FALSE)
 ```
 
 ```{r}
@@ -85,9 +85,6 @@ menURLs =
     "results/2012/2012cucb10m-m.htm")
 
 urls = paste(ubase, menURLs, sep = "")
-
-urls[1:3]
-
 
 extractResTable =
   # takes a list of websites from the cherry blossom race
@@ -145,12 +142,20 @@ save(menTables, file = "CBMenTextTables.rda")
 
 The data are successfully scraped from the urls that are given and we observe that the number of participants in the Cherry Blossom race has increased steadily from 1999 to 2012. We can use the `extractResTable` function to exptract all of the results, or to specify a single set of results.
 
-```{r}
+\tiny
+```{r, echo = TRUE, inlcude = FALSE}
 men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
 men_2009[1:10]
 ```
+\normalsize
 
-We observe the formatting of the text data, such as the use of the `=` character can be used to transform the lines of text into a a matrix. We will use this pattern to identify the boundary between the headering and the body of the data. 
+We observe the formatting of the text data, such as the use of the `=` character can be used to transform the lines of text into a a matrix. We will used this pattern to identify the boundary between the headering and the body of the data. Once we defined the column names, we were free to use the text structure, such as the spacing of column names and data, to identify datapoints. We started with age, which denoted by the `"ag"` identifier. After we sucessfully used the structure of the text data to identify an index location for `"ag"` data points. We expanded the search to inlcude  the spacing of text data to identify other data points. The spacing indices were used in a funtion that compiled a matrix of data points across the entire list of tables. 
+
+A function `findColLocs` was defined to use these space indices to locate the begin points for data throughout the extracted text data. `selectCols` is a tool that uses `findColLocs` to locate the data points for each column throughout the text for all of the race years. Our functions extracted almost all of the age data fomr the text, which aided in the identification errors within the dataset. To generalize this method, we defined a function, `extractVariables`, that combined the various processes we used to preprocess the data into a more machine readable format. 
+
+We now have a list of matrices. The original text data are in a much more machine readable format. Our number of rows for each matrix is equal to the number of original rows, minus the original text header. To perform statistical analyses on the numeric data, we must perform a datatype transformation.
+
+There were anomalies in the data for the year 2003. After an examination of the original data table, we found that the spacing in the year 2003 data is not the same as the other years. We adjusted our `selectCols` function to better capture the data for 2003. We also observe anomalies in the formatting of the year 2001. We introduced fixes and re-scraped the data once more to form the list of matrices called `menResMat`.
 
 ```{r}
 equals_idx<- grep('^===', men_2009)
@@ -167,16 +172,12 @@ body<- men_2009[-(1:equals_idx)] # working with 2009 body
 head(body)
 ```
 
-We can use the text above the `=` boundary as a header row to identify the columns names. 
-
 ```{r}
 headerRow<- tolower(headerRow)
 headerRow
 ```
 
-Now that we have defined the column names, we are free to use the text structure, such as the spacing of column names and data, to identify datapoints. We will start with `ag`.
-
-```{r}
+```{r, inlcude = FALSE, results= 'hide'}
 # looks for first match of given sequence
 ageStart<- regexec('ag', headerRow, fixed = TRUE)
 ageStart
@@ -192,7 +193,7 @@ head(age)
 summary(as.numeric(age))
 ```
 
-We have successfully used the structure of the text data to identify an index location for `ag` data points. We can continue to use the spacing of text data to identify other data points.
+
 
 ```{r}
 #gregexpr looks for all matches of a given sequence
@@ -204,7 +205,7 @@ searchLocs<- c(0,blankLocs[[1]])
 searchLocs
 ```
 
-The spacing indices will now be used in a funtion that can compile a matrix of data points across the entire list of tables. 
+
 
 ```{r}
 values<- mapply(substr, list(body), start = searchLocs[-length(searchLocs)] +1, stop = searchLocs[-1] -1)
@@ -212,7 +213,7 @@ length(values)
 head(values)
 ```
 
-A function `findColLocs` can be defined that uses these space indices to locate the begin points for data throughout the extracte text data. 
+
 
 ```{r}
 findColLocs<- function(spacerRow){
@@ -229,7 +230,7 @@ length(locs_2012)
 locs_2012
 ```
 
-`selectCols` is a tool that uses `findColLocs` to locate the data points for each column throughout the text for all of the race years.
+
 
 ```{r}
 selectCols = 
@@ -249,7 +250,7 @@ function(colNames, headerRow, searchLocs)
 }
 ```
 
-We can examine the results for validity with the summary function. Our functions have extracted almost all of the age data and may have identified some errors within the dataset.
+
 
 ```{r}
 searchLocs = findColLocs(spacerRow)
@@ -259,7 +260,7 @@ ages = mapply(substr, list(body),
 summary(as.numeric(ages))
 ```
 
-We can test the functionality of the tools we have assembled so far.
+
 
 ```{r}
 shortColNames = c("name", "home", "ag", "gun", "net", "time")
@@ -276,7 +277,7 @@ head(Values)
 tail(Values)[ , 1:3]
 ```
 
-To generalize this method, we define a function that combines the various processes we have used so far in the `extractVariables` function. 
+
 
 ```{r}
 extractVariables = 
@@ -308,7 +309,7 @@ menTables = mapply(extractResTable, url = urls, year = years)
 names(menTables) = years
 ```
 
-We now have a list of matrices. The original text data are in a much more machine readable format. Our number of rows for each matrix is equal to the number of original rows, minus the original text header.
+
 
 ```{r}
 menResMat = lapply(menTables, extractVariables)
@@ -317,7 +318,7 @@ length(menResMat)
 sapply(menResMat, nrow)
 ```
 
-To perform statistical analyses on the numeric data, we must perform a datatype transformation.
+
 
 ```{r}
 age = as.numeric(menResMat[['2012']][ , 'ag'])
@@ -329,9 +330,9 @@ age = sapply(menResMat,
 
 ```
 
-There appears to be an anomoly in the process for the year 2003. After an examination of the original data table, we found that the spacing in the year 2003 data is not the same as the other years. We will adjust our `selectCols` function to capture the data for 2003.
 
-```{r}
+
+```{r, include = TRUE}
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
 ```{r}
@@ -345,7 +346,7 @@ selectCols = function(shortColNames, headerRow, searchLocs) {
 }
 ```
 
-We also observe anomolies in the formatting of the year 2001. We introduce fixes and scrape the original tables once more to form the list of matrices called `menResMat`.
+
 
 ```{r}
 age2001 = age[["2001"]]
@@ -386,24 +387,27 @@ function(file, varNames =c("name", "home", "ag", "gun",
 menResMat = lapply(menTables, extractVariables)
 ```
 
-We must reformat the `ag` data to a numeric format for analysis. 
+After these anomalies were corrected, we reformatted the datatypes. The `"ag"` data was changed to a numeric format for analysis, which revealed *more* anomalies. We observed suspiciously young ages between the years 2001 and 2003. These ages were revealed to be *erroneous* upon closer examination. These values were removed from the dataset.
+
+To make the remaining analyses easier, we transformed the data structure from a list of matrices into a dataframe. Combining the data into a single dataframe facilitated the cleaning of the columns containing the time data for each runner. These values were stored as characters and were in an HR:MIN:SEC format. We can separate the values and convert them all into a standard time format, minutes. We defined a function that converts the time into a minute format. 
+
+The end result was a dataframe called menDF. With this process complete, we simply re-used the functions on the women's data. 
+
 ```{r}
 age<- sapply(menResMat, function(x) as.numeric(x[, 'ag']))
 ```
-
-We can observe a mostly cleaned dataset with trace numbers of NA values across the 14 matrices.
 
 ```{r}
 sapply(age, function(x) sum(is.na(x)))
 ```
 
-We will also observe the distributions of `ag` across each race. We can observe a few very young participants between 2001 and 2003. These may be errors and require a closer examination. 
+
 
 ```{r}
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
 
-Many of these participants have an `ag` value of 0. There are very few of these values, so we will remove them from consideration.
+
 
 ```{r}
 young<- menResMat[['2001']][,'ag'] < 10
@@ -416,7 +420,7 @@ y2002<- menResMat[['2002']][,'ag'] < 10
 y2003<- menResMat[['2003']][,'ag'] < 10
 ```
 
-To make the remaining analyses easier, we will transform the data structure from a list of matrices into a dataframe. To identify the data by year, we must add year vectors with lengths equal to the number of rows in each matrix.
+
 
 ```{r}
 menResDF = lapply(menResMat, data.frame)
@@ -463,14 +467,14 @@ for (i in 1:length(names(menResDF))) {
 menResFinal$Date<- cols
 ```
 
-Our data is now in a much more convenient data structure. 
+
 
 ```{r}
 menResFinal$ag = as.numeric(menResFinal$ag)
 sum(is.na(menResFinal$ag))
 ```
 
-Combining the data into a single dataframe facilitates the cleaning of the columns containing the time data for each runner. These values are all still stored as characters and are in an HR:MIN:SEC format. We can separate the values and convert them all into a standard time format, minutes.
+
 
 ```{r, include = FALSE}
 times = menResFinal$time
@@ -482,7 +486,7 @@ timePieces = sapply(timePieces, as.numeric)
 head(timePieces)
 ```
 
-We define a function that converts the time into a minute format.
+
 
 ```{r}
 runTime = sapply(timePieces, 
@@ -504,7 +508,7 @@ convertTime = function(time) {
 }
 ```
 
-We can combine these tools into a single function that will process the times. The end result will be a dataframe called menDF.
+
 
 ```{r, include = FALSE}
 createDF = function(Res, year, sex) 
@@ -534,7 +538,6 @@ menDF = mapply(createDF, menResMat, year = 1999:2012,
                sex = rep("M", 14), SIMPLIFY = FALSE)
 ```
 
-Finally, we find a few residual issues with the data from 2006 and clean that data and finalize our menDF dataframe.
 
 ```{r}
 sapply(menDF, function(x) sum(is.na(x$runTime)))
@@ -551,7 +554,7 @@ menDF = mapply(createDF, menResMat, year = 1999:2012,
                sex = rep("M", 14), SIMPLIFY = FALSE)
 ```
 
-With this process complete, we can simply re-use the functions on the women's data. 
+
 
 ```{r}
 womenURLs = 
@@ -571,7 +574,6 @@ names(womenTables) = years
 sapply(womenTables, length)
 ```
 
-We observe similar issues in the women's data that we did in the men's data for the year 2006.
 
 ```{r, inlcude = FALSE}
 separatorIdx = grep("^===", womenTables[["2006"]])
@@ -588,26 +590,26 @@ womenDF = mapply(createDF, womenResMat, year = 1999:2012,
                sex = rep("W", 14), SIMPLIFY = FALSE)
 ```
 
-The `ag` column indicates a mostly successful data preprocessing scheme.
+
 
 ```{r}
 sapply(womenDF, function(x) sum(is.na(x$age)))
 ```
 
-The `runTime` column is completely clean.
+
 
 ```{r}
 sapply(womenDF, function(x) sum(is.na(x$runTime)))
 ```
 
-Since there are so few NA values, we can safely remove them without affecting the results of the analysis.
+
 
 ```{r}
 menDF_complete = na.omit(menDF)
 womenDF_complete = na.omit(womenDF)
 ```
 
-We can combine the men's and women's data into a single dataframe for a complete analysis of the results over a 14 year period. 
+
 
 ```{r}
 cherryblossom = data.frame()
@@ -637,9 +639,137 @@ Our dataset is complete, clean, and ready for further analysis.
 cherryblossom = na.omit(cherryblossom)
 sum(is.na(cherryblossom))
 ```
+```{r, include= TRUE}
+head(cherryblossom)
+```
+
 
 # Conclusion
+Some of the fastest average runners in the world participating in the race come from Tanzania, Morocco, and Colombia while the nation represented by the slowest average runner is Ireland.
 
+```{r}
+library(pacman)
+p_load(rnaturalearth,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, gdata, maps)
+
+cherryblossom[gdata::trim(cherryblossom$name)=="Matthew Rogers",]$home = "Arlington VA"
+cherryblossom[gdata::trim(cherryblossom$name)=="Adri Jayaratne",]$home = "Washington DC"
+cherryblossom[gdata::trim(cherryblossom$name)=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[gdata::trim(cherryblossom$name)=="Eleanor Rathbone",]$home = "Washington DC"
+cherryblossom[gdata::trim(cherryblossom$name)=="Emily Naden",]$home = "Washington DC"
+cherryblossom[gdata::trim(cherryblossom$name)=="Grace L Chen",]$home = "Washington DC"
+cherryblossom[gdata::trim(cherryblossom$name)=="Stephanie Rogers",]$home = "Aldie VA"
+cherryblossom[gdata::trim(cherryblossom$name)=="Sarah Garner",]$home = "	Arlington VA"
+cherryblossom[gdata::trim(cherryblossom$name)=="Maria Solomon",]$home = "Arlington VA"
+cherryblossom[gdata::trim(cherryblossom$name)=="Amy Iacopi",]$home = "San Francisco CA"
+cherryblossom[gdata::trim(cherryblossom$name)=="Sarah Watkins",]$home = "Washington DC"
+cherryblossom[gdata::trim(cherryblossom$name)=="Alissa Havens",]$home = "Washington DC"
+
+cherryblossomX = cherryblossom
+
+cherryblossomX[gdata::trim(cherryblossomX$home)=="AUS",]$home = "Australia"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Bri",]$home = "United Kingdom of Great Britain and Northern Ireland"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="CAN",]$home = "Canada"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="COL",]$home = "Colombia"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="CZE",]$home = "Czech Republic"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="ETH",]$home = "Ethiopia"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Eth",]$home = "Ethiopia"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Fra",]$home = "France"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="GER",]$home = "Germany"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="IRE",]$home = "Ireland"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="JAP",]$home = "Japan"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="KEN",]$home = "Kenya"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="KOR",]$home = "Republic of Korea"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Ken",]$home = "Kenya"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="LIT",]$home = "Lithuania"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="MEX",]$home = "Mexico"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Mex",]$home = "Mexico"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Ny",]$home = "United States"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="MD",]$home = "United States"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="PER",]$home = "Peru"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="POL",]$home = "Poland"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="RSA",]$home = "South Africa"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="ROM",]$home = "Romania"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="RUS",]$home = "Russia"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Rom",]$home = "Romania"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Rus",]$home = "Russia"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="SCO",]$home = "United Kingdom of Great Britain and Northern Ireland"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Us",]$home = "United States"
+cherryblossomX[gdata::trim(cherryblossomX$home)=="Usa",]$home = "United States"
+
+dropVars <- c("", "Lee","M")
+cherryblossomX <- cherryblossomX[!(gdata::trim(cherryblossomX$home) %in% dropVars ),]
+
+for(i in 1:length(cherryblossomX$home)){
+  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','VI')){
+    cherryblossomX$home[i] <- 'United States'
+  }
+  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-2, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('afb','AFB')){
+    cherryblossomX$home[i] <- 'United States'
+  }
+  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-2, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('ONT')){
+    cherryblossomX$home[i] <- 'Canada'
+  }
+  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('UK','LE')){
+    cherryblossomX$home[i] <- 'United Kingdom of Great Britain and Northern Ireland'
+  }
+  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% c('CN','ON','NO','SA','BC')){ # Ontario, Nova Scotia, Seskatchewan, British Colombia
+    cherryblossomX$home[i] <- 'Canada'
+  }
+  if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% 'PR'){
+    cherryblossomX$home[i] <- 'Puerto Rico'
+  }
+    if(substr( trim(cherryblossomX$home[i]), nchar(gdata::trim(cherryblossomX$home[i]))-1, nchar(gdata::trim(cherryblossomX$home[i])) ) %in% 'GE'){
+    cherryblossomX$home[i] <- 'Germany'
+    }
+  if(trim(cherryblossomX$home[i]) %in% 'Rep Of S.africa'){
+    cherryblossomX$home[i] <- 'South Africa'
+  }
+  if(trim(cherryblossomX$home[i]) %in% 'Dominican Republi'){
+    cherryblossomX$home[i] <- 'Dominican Republic'
+  }
+  if(trim(cherryblossomX$home[i]) %in% 'Scotland'){
+    cherryblossomX$home[i] <- 'United Kingdom of Great Britain and Northern Ireland'
+  }
+  if(trim(cherryblossomX$home[i]) %in% 'NewZealand'){
+    cherryblossomX$home[i] <- 'New Zealand'
+  }
+  if(trim(cherryblossomX$home[i]) %in% 'Russia'){
+    cherryblossomX$home[i] <- 'Russian Federation'
+  }
+  if(trim(cherryblossomX$home[i]) %in% 'Tanzania'){
+    cherryblossomX$home[i] <- 'Tanzania, United Republic of'
+  }
+  else{
+    if(!gdata::trim(cherryblossomX$home[i]) %in% c('Australia','Bolivia, Plurinational State of','Brazil','United Kingdom of Great Britain and Northern Ireland','Canada','Colombia','CzechRepublic','DominicanRepubli','DominicanRepublic','Dominican Republic','Czech Republic','South Africa','Puerto Rico','Ethiopia','France','Germany','Guatemala','Ireland','Japan','Kenya','Republic of Korea','Lithuania','Malta','Mexico','Morocco','NewZealand','New Zealand','Peru','Poland','PuertoRico','RepOfS.africa','Romania','Russia','Russian Federation','SouthAfrica','Trinidad and Tobago','Ukraine','UnitedKingdom','Uruguay','Tanzania, United Republic of','Slovenia')){
+      cherryblossomX$home[i] <- 'United States'
+    }
+  }
+}
+```
+```{r, include = T}
+cherryblossomX$home <- gdata::trim(cherryblossomX$home)
+
+
+# names(cherryblossomX)
+# sqldf("select home, avg(runTime) from cherryblossomX group by home order by avg(runTime) asc")
+
+dat <- iso3166
+
+cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from cherryblossomX x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
+
+map <- ne_countries(scale = "medium", returnclass = "sf")
+runners_map <- merge(map, cherryblossom_country_runtimes, by.x = "adm0_a3", by.y = "a3", all = TRUE)
+
+assoc_graph <- ggplot(data = runners_map) +
+  geom_sf(aes(fill = runTime), 
+          position = "identity") + 
+  labs(fill='Average\nCompletion Time')  +
+  scale_fill_viridis_c(option = "viridis") +
+   ggtitle('Average Race Completion Time, by Country')
+
+assoc_graph + theme_map()
+
+```
 
 
 \appendix
