@@ -750,7 +750,7 @@ assoc_graph <- ggplot(data = runners_map) +
   geom_sf(aes(fill = runTime), 
           position = "identity") + 
   labs(fill='Average\nCompletion Time', caption = paste(
-      'Figure 1:\n',
+      'Figure 2:\n',
       'Global Race Completion Times', sep=''))  +
   scale_fill_viridis_c(option = "viridis") +
    ggtitle('Average Race Completion Time, by Country')
@@ -851,7 +851,7 @@ plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALS
   theme(legend.position = "right") + 
   theme(panel.background = element_rect(colour = "black")) + 
   labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State", caption = paste(
-      'Figure 2:\n',
+      'Figure 3:\n',
       'Statewide Race Completion Times', sep=''))
 ```
 
