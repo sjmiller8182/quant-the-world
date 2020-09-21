@@ -976,6 +976,692 @@ Because of the level of missing, unrecoverable information, we did not feel infe
 # Code
 
 ```
-The code is cooool
+library(pacman)
+p_load(XML, rnaturalearth,rnaturalearthdata,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, maps)
+ubase = "http://www.cherryblossom.org/"
+menURLs = 
+  c("results/1999/cb99m.html", "results/2000/Cb003m.htm", "results/2001/oof_m.html",
+    "results/2002/oofm.htm", "results/2003/CB03-M.HTM",
+    "results/2004/men.htm", "results/2005/CB05-M.htm", 
+    "results/2006/men.htm", "results/2007/men.htm", 
+    "results/2008/men.htm", "results/2009/09cucb-M.htm",
+    "results/2010/2010cucb10m-m.htm", 
+    "results/2011/2011cucb10m-m.htm",
+    "results/2012/2012cucb10m-m.htm")
+
+urls = paste(ubase, menURLs, sep = "")
+
+extractResTable =
+  # takes a list of websites from the cherry blossom race
+  # a list of years corresponding to the year the result is for
+  # and the gender of the participant
+  # Retrieve data from web site, 
+  # find the preformatted text,
+  # and write lines or return as a character vector.
+  # returns a list of strings corrsponding to lines in the web url
+  function(url = "http://www.cherryblossom.org/results/2009/09cucb-F.htm",
+           year = 1999, sex = "male", file = NULL)
+  {
+    doc = htmlParse(url)
+
+    if (year == 2000) {
+      # Get preformatted text from 4th font element
+      # The top file is ill formed so the <pre> search doesn't work.
+      ff = getNodeSet(doc, "//font")
+      txt = xmlValue(ff[[4]])
+      els = strsplit(txt, "\r\n")[[1]]
+    }
+    else if (year == 2009 & sex == "male") {
+      # Get preformatted text from <div class="Section1"> element
+      # Each line of results is in a <pre> element
+      div1 = getNodeSet(doc, "//div[@class='Section1']")
+      pres = getNodeSet(div1[[1]], "//pre")
+      els = sapply(pres, xmlValue)
+      els = gsub("Â", "", els)
+    }
+    else if (year == 1999) {
+      # Get preformatted text from <pre> elements
+      pres = getNodeSet(doc, "//pre")
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\n")[[1]]   
+    } 
+    else {
+      # Get preformatted text from <pre> elements
+      pres = getNodeSet(doc, "//pre")
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\r\n")[[1]]   
+    } 
+    if (is.null(file)) return(els)
+    # Write the lines as a text file.
+    writeLines(els, con = file)
+  }
+
+# turn the text data into a list of matrices
+years = 1999:2012
+menTables = mapply(extractResTable, url = urls, year = years)
+names(menTables) = years
+sapply(menTables, length)
+
+save(menTables, file = "CBMenTextTables.rda")
+
+# extractResTable can gather results for a single year, or multiple
+men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
+men_2009[1:10]
+
+# find the row index where '===' can be found
+equals_idx<- grep('^===', men_2009)
+equals_idx
+
+equals_idx2<- substr(men_2009, 1,3)
+which(equals_idx2 == '===')
+
+#use the location of '===' to identify the spacer and header
+spacerRow<- men_2009[equals_idx]
+headerRow<- men_2009[equals_idx -1]
+body<- men_2009[-(1:equals_idx)] # working with 2009 body
+
+head(body)
+
+# transform the header to lower case to standardize it
+headerRow<- tolower(headerRow)
+headerRow
+
+# looks for first match of given sequence
+ageStart<- regexec('ag', headerRow, fixed = TRUE)
+#ageStart
+
+# extract age data from the text
+age<- substr(body, start = 49, stop = 50)
+head(age)
+
+summary(as.numeric(age))
+
+#gregexpr looks for all matches of a given sequence
+blankLocs<- gregexpr(' ', spacerRow)
+blankLocs
+
+# dientify search indices to find data
+searchLocs<- c(0,blankLocs[[1]])
+searchLocs
+
+# extract data using the helper functions
+values<- mapply(substr, list(body), start = searchLocs[-length(searchLocs)] +1, stop = searchLocs[-1] -1)
+length(values)
+head(values)
+
+# a function that finds the column locations using the 
+# previously defined spacing tools
+findColLocs<- function(spacerRow){
+  spaceLocs<- gregexpr(' ', spacerRow)[[1]]
+  rowLength<- nchar(spacerRow)
+  
+  if (substring(spacerRow, rowLength, rowLength) != ' ')
+    return( c(0, spaceLocs, rowLength +1))
+  else return(c(0,spaceLocs))
+}
+
+locs_2012<- findColLocs(spacerRow)
+length(locs_2012)
+locs_2012
+
+# extracts column data from text
+selectCols = 
+function(colNames, headerRow, searchLocs) 
+{
+  sapply(colNames, 
+         function(name, headerRow, searchLocs)
+         {
+           startPos = regexpr(name, headerRow)[[1]]
+           if (startPos == -1) 
+             return( c(NA, NA) )
+    
+           index = sum(startPos >= searchLocs)
+           c(searchLocs[index] + 1, searchLocs[index + 1] - 1)
+         },
+         headerRow = headerRow, searchLocs = searchLocs )
+}
+
+# the findColLocs function can be used to find a specific 
+# type of data, such as age
+
+searchLocs = findColLocs(spacerRow)
+ageLoc = selectCols("ag", headerRow, searchLocs) 
+ages = mapply(substr, list(body), 
+              start = ageLoc[1,], stop = ageLoc[2, ])
+summary(as.numeric(ages))
+
+# the tested functions can now be used to form matrices
+shortColNames = c("name", "home", "ag", "gun", "net", "time")
+locCols = selectCols(shortColNames, headerRow, searchLocs)
+
+#mapply forms a matrix after completion
+Values = mapply(substr, list(body), start = locCols[1, ], 
+                stop = locCols[2, ])
+
+class(Values)
+
+colnames(Values) = shortColNames
+head(Values)
+tail(Values)[ , 1:3]
+
+# a function to extract all variables from the menTables data
+extractVariables = 
+  function(file, varNames =c("name", "home", "ag", "gun",
+                             "net", "time"))
+{
+       # Find the index of the row with =s
+  eqIndex = grep("^===", file)
+       # Extract the two key rows and the data
+  spacerRow = file[eqIndex] 
+  headerRow = tolower(file[ eqIndex - 1 ])
+  body = file[ -(1 : eqIndex) ]
+       
+       # Obtain the starting and ending positions of variables
+  searchLocs = findColLocs(spacerRow)
+  locCols = selectCols(varNames, headerRow, searchLocs)
+
+  Values = mapply(substr, list(body), start = locCols[1, ], 
+                  stop = locCols[2, ])
+  colnames(Values) = varNames
+  
+  invisible(Values)
+}
+
+# assign names and extract the data into a list of matrices
+years = 1999:2012
+menTables = mapply(extractResTable, url = urls, year = years)
+names(menTables) = years
+
+# menResMat is a list of matrices containing race data 
+menResMat = lapply(menTables, extractVariables)
+length(menResMat)
+
+sapply(menResMat, nrow)
+
+# transforming the age to a numeric format
+age = as.numeric(menResMat[['2012']][ , 'ag'])
+
+tail(age)
+# applying the transformation to all matrices
+age = sapply(menResMat,
+             function(x) as.numeric(x[ , 'ag']))
+
+
+# visualizing 'age' to check for anomalies 
+boxplot(age, ylab = "Age", xlab = "Year",
+        main = 'Anomalies in Age Data')
+
+# adjusting the selectCols function to catch more age data
+selectCols = function(shortColNames, headerRow, searchLocs) {
+  sapply(shortColNames, function(shortName, headerRow, searchLocs){
+    startPos = regexpr(shortName, headerRow)[[1]]
+    if (startPos == -1) return( c(NA, NA) )
+    index = sum(startPos >= searchLocs)
+    c(searchLocs[index] + 1, searchLocs[index + 1])
+  }, headerRow = headerRow, searchLocs = searchLocs )
+}
+
+# examining the data for 2001
+age2001 = age[["2001"]]
+
+grep("^===", menResMat['2001'])
+
+badAgeIndex = which(is.na(age2001)) + 5
+
+# adjusting the extractVariables function to make it more performant
+extractVariables = 
+function(file, varNames =c("name", "home", "ag", "gun",
+                           "net", "time"))
+{
+  
+  # Find the index of the row with =s
+  eqIndex = grep("^===", file)
+  # Extract the two key rows and the data 
+  spacerRow = file[eqIndex] 
+  headerRow = tolower(file[ eqIndex - 1 ])
+  body = file[ -(1 : eqIndex) ]
+       # Remove footnotes and blank rows
+  footnotes = grep("^[[:blank:]]*(\\*|\\#)", body)
+  if ( length(footnotes) > 0 ) body = body[ -footnotes ]
+  blanks = grep("^[[:blank:]]*$", body)
+  if (length(blanks) > 0 ) body = body[ -blanks ]
+  
+  
+  # Obtain the starting and ending positions of variables   
+  searchLocs = findColLocs(spacerRow)
+  locCols = selectCols(varNames, headerRow, searchLocs)
+  
+  Values = mapply(substr, list(body), start = locCols[1, ], 
+                  stop = locCols[2, ])
+  colnames(Values) = varNames
+  
+  return(Values)
+}
+
+menResMat = lapply(menTables, extractVariables)
+
+# applying datatype transformations again
+age<- sapply(menResMat, function(x) as.numeric(x[, 'ag']))
+
+# counting na values
+sapply(age, function(x) sum(is.na(x)))
+
+# visualizing results to check for anomalies
+boxplot(age, ylab = "Age", xlab = "Year")
+
+# removing young outliers under 10 years old
+young<- menResMat[['2001']][,'ag'] < 10
+menResMat[['2001']]<- menResMat[['2001']][-c(young),]
+y2002<- menResMat[['2002']][,'ag'] < 10
+y2003<- menResMat[['2003']][,'ag'] < 10
+menResMat[['2002']]<- menResMat[['2002']][-c(y2002),]
+menResMat[['2003']]<- menResMat[['2003']][-c(y2003),]
+y2002<- menResMat[['2002']][,'ag'] < 10
+y2003<- menResMat[['2003']][,'ag'] < 10
+
+# transforming the list of matrices into a dataframe
+menResDF = lapply(menResMat, data.frame)
+
+# creating rows to identify each year
+col_1999 = rep(1999, nrow(menResDF$`1999`))
+
+col_2000 = rep(2000, nrow(menResDF$`2000`))
+
+col_2001 = rep(2001, nrow(menResDF$`2001`))
+
+col_2002 = rep(2002, nrow(menResDF$`2002`))
+
+col_2003 = rep(2003, nrow(menResDF$`2003`))
+
+col_2004 = rep(2004, nrow(menResDF$`2004`))
+
+col_2005 = rep(2005, nrow(menResDF$`2005`))
+
+col_2006 = rep(2006, nrow(menResDF$`2006`))
+
+col_2007 = rep(2007, nrow(menResDF$`2007`))
+
+col_2008 = rep(2008, nrow(menResDF$`2008`))
+
+col_2009 = rep(2009, nrow(menResDF$`2009`))
+
+col_2010 = rep(2010, nrow(menResDF$`2010`))
+
+col_2011 = rep(2011, nrow(menResDF$`2011`))
+
+col_2012 = rep(2012, nrow(menResDF$`2012`))
+
+cols = c(col_1999, col_2000, col_2001, col_2002, col_2003, col_2004, col_2005, col_2006, col_2007, col_2008, col_2009, col_2010, col_2011, col_2012)
+
+# building dataframe with year column
+menResFinal = data.frame()
+for (i in 1:length(names(menResDF))) {
+  
+  df<- menResDF[[i]]
+  menResFinal = rbind(menResFinal, df)
+}
+menResFinal$Date<- cols
+
+# transforming the age column to numeric
+menResFinal$ag = as.numeric(menResFinal$ag)
+sum(is.na(menResFinal$ag))
+
+# identifying a method for transforming the times data
+times = menResFinal$time
+timePieces = strsplit(as.character(times), ":")
+
+tail(timePieces)
+
+timePieces = sapply(timePieces, as.numeric)
+head(timePieces)
+
+# a function to transform the time data into a standard minute format
+runTime = sapply(timePieces, 
+                 function(x) {
+                   if (length(x) == 2) x[1] + x[2]/60
+                   else 60*x[1] + x[2] + x[3]/60
+                 })
+
+summary(runTime)
+
+# generalizing the tiem transformation process and applying it
+convertTime = function(time) {
+  timePieces = strsplit(time, ":")
+  timePieces = sapply(timePieces, as.numeric)
+  sapply(timePieces, function(x) {
+                      if (length(x) == 2) x[1] + x[2]/60
+                      else 60*x[1] + x[2] + x[3]/60
+                      })
+}
+
+# a function creating the final dataframe
+createDF = function(Res, year, sex) 
+{
+  # Determine which time to use
+  if ( !is.na(Res[1, 'net']) ) useTime = Res[ , 'net']
+  else if ( !is.na(Res[1, 'gun']) ) useTime = Res[ , 'gun']
+  else useTime = Res[ , 'time']
+  
+  # Remove # and * and blanks from time
+  useTime = gsub("[#\\*[:blank:]]", "", useTime)
+  runTime = convertTime(useTime[ useTime != "" ])
+  
+  # Drop rows with no time
+  Res = Res[ useTime != "", ]
+  
+  Results = data.frame(year = rep(year, nrow(Res)),
+                       sex = rep(sex, nrow(Res)),
+                       name = Res[ , 'name'], home = Res[ , 'home'],
+                       age = as.numeric(Res[, 'ag']), 
+                       runTime = runTime,
+                       stringsAsFactors = FALSE)
+  invisible(Results)
+}
+
+menDF = mapply(createDF, menResMat, year = 1999:2012,
+               sex = rep("M", 14), SIMPLIFY = FALSE)
+
+# checking menDF for anomalies
+sapply(menDF, function(x) sum(is.na(x$runTime)))
+# fixing spacing anomalies in the 2006 data
+separatorIdx = grep("^===", menTables[["2006"]])
+separatorRow = menTables[['2006']][separatorIdx]
+separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
+                      substring(separatorRow, 65, nchar(separatorRow)), 
+                      sep = "")
+menTables[['2006']][separatorIdx] = separatorRowX
+# applying the spacing fix to recreate menResMat
+menResMat = sapply(menTables, extractVariables)
+# recreating menDF
+menDF = mapply(createDF, menResMat, year = 1999:2012,
+               sex = rep("M", 14), SIMPLIFY = FALSE)
+
+# importing the data for women
+womenURLs = 
+  c("results/1999/cb99f.html", "results/2000/Cb003f.htm", "results/2001/oof_f.html",
+    "results/2002/ooff.htm", "results/2003/CB03-F.HTM",
+    "results/2004/women.htm", "results/2005/CB05-F.htm", 
+    "results/2006/women.htm", "results/2007/women.htm", 
+    "results/2008/women.htm", "results/2009/09cucb-F.htm",
+    "results/2010/2010cucb10m-F.htm", 
+    "results/2011/2011cucb10m-F.htm",
+    "results/2012/2012cucb10m-F.htm")
+
+years = 1999:2012
+urls = paste(ubase, womenURLs, sep = "")
+# saving extracted text data
+womenTables = mapply(extractResTable, url = urls, year = years, sex='female')
+names(womenTables) = years
+sapply(womenTables, length)
+
+# applying the same fixes to the women's data as was done to the men
+separatorIdx = grep("^===", womenTables[["2006"]])
+separatorRow = womenTables[['2006']][separatorIdx]
+separatorRowX = paste(substring(separatorRow, 1, 63), " ",
+                      substring(separatorRow, 65, nchar(separatorRow)),
+                      sep = "")
+womenTables[['2006']][separatorIdx] = separatorRowX
+
+womenTables[['2001']][2:3] = womenTables[['2002']][2:3]
+# making list of matrices of women's data
+womenResMat = sapply(womenTables, extractVariables)
+# transforming list of matrices into dataframe
+womenDF = mapply(createDF, womenResMat, year = 1999:2012,
+               sex = rep("W", 14), SIMPLIFY = FALSE)
+
+# checking age for na values
+sapply(womenDF, function(x) sum(is.na(x$age)))
+
+# checking runTime for na values
+sapply(womenDF, function(x) sum(is.na(x$runTime)))
+
+# removing na values because there are so few
+menDF_complete = na.omit(menDF)
+womenDF_complete = na.omit(womenDF)
+
+# copying the men's data dataframe into a single dataframe 
+cherryblossom = data.frame()
+for (i in 1:14) {
+  
+  df<- menDF_complete[[i]]
+  cherryblossom = rbind(cherryblossom, df)
+}
+head(cherryblossom)
+
+# copying the women's data into the cherryblossom dataframe
+for (i in 1:14) {
+  
+  df<- womenDF_complete[[i]]
+  cherryblossom = rbind(cherryblossom, df)
+}
+tail(cherryblossom)
+
+# checking for na values
+sum(is.na(cherryblossom))
+
+# removing na values
+cherryblossom = na.omit(cherryblossom)
+sum(is.na(cherryblossom))
+
+head(cherryblossom)
+
+library(pacman)
+# loading all packages. The first 3 are for ISO codes and the usmap and map are for the literal maps
+# also loading sqldf. Because of the volume of the data, sqldf was extremely faster than updating with conditionals in a for-loop;
+# the time difference was roughly 5 seconds (sqldf) vs. 5 minutes (conditional for-loop)
+p_load(rnaturalearth,rnaturalearthdata,countrycode,tidyverse,ggplot2,ggthemes,viridis,rgeos,usmap, sqldf, maps)
+
+# These runners were all missing locations or had bad locations. We replaced them with what they had listed on file
+# from previous races:
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Matthew Rogers",]$home = "Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Adri Jayaratne",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Marla Hallacy",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Eleanor Rathbone",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Emily Naden",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Grace L Chen",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Stephanie Rogers",]$home = "Aldie VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Sarah Garner",]$home = "	Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Maria Solomon",]$home = "Arlington VA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Amy Iacopi",]$home = "San Francisco CA"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Sarah Watkins",]$home = "Washington DC"
+cherryblossom[trimws(cherryblossom$name, "both", "[ \t\r\n]")=="Alissa Havens",]$home = "Washington DC"
+
+cherryblossomX = cherryblossom
+# the home column needed leading and trailing trimming
+cherryblossomX$home = trimws(cherryblossomX$home, "both", "[ \t\r\n]")
+
+# Standardizing countries to names where only codes were present. Although we revert them to codes for mapping,
+# it is easier to work with the countries by name when coding
+cherryblossomX[cherryblossomX$home =="AUS",]$home = "Australia"
+cherryblossomX[cherryblossomX$home =="CAN",]$home = "Canada"
+cherryblossomX[cherryblossomX$home =="COL",]$home = "Colombia"
+cherryblossomX[cherryblossomX$home =="CZE",]$home = "Czech Republic"
+cherryblossomX[cherryblossomX$home =="Fra",]$home = "France"
+cherryblossomX[cherryblossomX$home =="GER",]$home = "Germany"
+cherryblossomX[cherryblossomX$home =="IRE",]$home = "Ireland"
+cherryblossomX[cherryblossomX$home =="JAP",]$home = "Japan"
+cherryblossomX[cherryblossomX$home =="KOR",]$home = "Republic of Korea"
+cherryblossomX[cherryblossomX$home =="LIT",]$home = "Lithuania"
+cherryblossomX[cherryblossomX$home =="PER",]$home = "Peru"
+cherryblossomX[cherryblossomX$home =="POL",]$home = "Poland"
+cherryblossomX[cherryblossomX$home =="RSA",]$home = "South Africa"
+
+cherryblossomX[cherryblossomX$home %in% c("ETH","Eth"),]$home = "Ethiopia"
+cherryblossomX[cherryblossomX$home %in% c("KEN","Ken"),]$home = "Kenya"
+cherryblossomX[cherryblossomX$home %in% c("MEX","Mex"),]$home = "Mexico"
+cherryblossomX[cherryblossomX$home %in% c("RUS","Rus"),]$home = "Russian Federation"
+cherryblossomX[cherryblossomX$home %in% c("ROM","Rom"),]$home = "Romania"
+cherryblossomX[cherryblossomX$home %in% c("Us","Usa","Ny","MD"),]$home = "United States"
+cherryblossomX[cherryblossomX$home %in% c("Bri","SCO"),]$home = "United Kingdom of Great Britain and Northern Ireland"
+
+# dropping non-locational values
+dropVars <- c("", "Lee","M")
+cherryblossomX <- cherryblossomX[!(cherryblossomX$home %in% dropVars ),]
+
+# Under the assumption US states have either leading spaces or commas (such as in Phoenix AZ/Phoenix,AZ/Phoenix, AZ for example),
+# We recode states to 'United States' as follows in the SQL below. Also, Canadian states are recoded to 'Canada' in addition to
+# the remaining nations being recoded to ISO standards. These were identified through manual, direct analysis. In the UK, one location
+# with a code of LE was given for a city in Leicestershire. Finally, all remaining countries in the ISO list are provided and those not
+# included are recorded to United States as it was specified in the documentation that American cities were not included with a national
+# location (they, at best, included only state codes)
+summary_table = sqldf("
+      select 
+      case when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AL',' AK',' AZ',' AR',' CA',' CO',' CT',' DE',' DC',' FL',' GA',' HI',' ID',' IL',' IN',' IA',' KS',' KY',' LA',' ME',' MD',' MA',' MI',' MN',' MS',' MO',' MT',' NE',' NV',' NH',' NJ',' NM',' NY',' NC',' ND',' OH',' OK',' OR',' PA',' RI',' SC',' SD',' TN',' TX',' UT',' VT',' VA',' WA',' WV',' WI',' WY',' VI',',AL',',AK',',AZ',',AR',',CA',',CO',',CT',',DE',',DC',',FL',',GA',',HI',',ID',',IL',',IN',',IA',',KS',',KY',',LA',',ME',',MD',',MA',',MI',',MN',',MS',',MO',',MT',',NE',',NV',',NH',',NJ',',NM',',NY',',NC',',ND',',OH',',OK',',OR',',PA',',RI',',SC',',SD',',TN',',TX',',UT',',VT',',VA',',WA',',WV',',WI',',WY',',VI','afb','AFB') then 'United States'
+           when trim(home) in ('California') then 'United States'
+           when trim(home) in ('Indiana') then 'United States'
+           when trim(home) in ('Wyoming') then 'United States'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CN',' ON',' NO',' SA',' BC',',CN',',ON',',NO','SA',',BC') then 'Canada'
+           when substr( trim(home), length(trim(home))-3, length(trim(home)) ) in (' ONT',',ONT') then 'Canada'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' UK',',UK',' LE',',LE') then 'United Kingdom of Great Britain and Northern Ireland'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' PR',',PR') then 'Puerto Rico'
+           when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' GE',',GE') then 'Germany'
+           when trim(home) in ('Rep Of S.africa') then 'South Africa'
+           when trim(home) in ('Scotland') then 'United Kingdom of Great Britain and Northern Ireland'
+           when trim(home) in ('NewZealand') then 'New Zealand'
+           when trim(home) in ('Russia') then 'Dominican Republic'
+           when trim(home) in ('Dominican Republi') then 'Russian Federation'
+           when trim(home) in ('Trinidad') then 'Trinidad and Tobago'
+           when trim(home) in ('Tanzania') then 'Tanzania, United Republic of'
+           when trim(home) in ('Bolivia') then 'Bolivia, Plurinational State of'
+           when trim(home) not in ('Australia','Bolivia, Plurinational State of','Brazil','United Kingdom of Great Britain and Northern Ireland','Canada','Colombia','CzechRepublic','DominicanRepubli','DominicanRepublic','Dominican Republic','Czech Republic','South Africa','Puerto Rico','Ethiopia','France','Germany','Guatemala','Ireland','Japan','Kenya','Republic of Korea','Lithuania','Malta','Mexico','Morocco','NewZealand','New Zealand','Peru','Poland','PuertoRico','RepOfS.africa','Romania','Russian Federation','SouthAfrica','Trinidad and Tobago','Ukraine','UnitedKingdom','Uruguay','Tanzania, United Republic of','Slovenia','Jordan','Aruba', 'Angola', 'Aland Islands', 'Andorra', 'Argentina', 'American Samoa', 'French Southern and Antarctic Lands', 'Antigua and Barbuda', 'Austria', 'Burundi', 'Benin', 'Bonaire, Sint Eustatius and Saba', 'Burkina Faso', 'Bulgaria', 'Bahamas', 'Saint Barthelemy', 'Belize', 'Bolivia, Plurinational State of', 'Barbados', 'Bhutan', 'Botswana', 'Canada', 'Switzerland', 'China', 'Ivory Coast', 'Democratic Republic of the Congo', 'Cook Islands', 'Comoros', 'Costa Rica', 'Curacao', 'Cayman Islands', 'Czech Republic', 'Djibouti', 'Denmark', 'Algeria', 'Egypt', 'Western Sahara', 'Spain', 'Ethiopia', 'Fiji', 'France', 'Faroe Islands', 'Gabon', 'Georgia', 'Ghana', 'Guinea', 'Gambia', 'Equatorial Guinea', 'Grenada', 'Guatemala', 'Guam', 'Hong Kong', 'Heard Island and McDonald Islands', 'Croatia', 'Hungary', 'Isle of Man', 'British Indian Ocean Territory', 'Ireland', 'Iraq', 'Israel', 'Jamaica', 'Jordan', 'Kazakhstan', 'Kyrgyzstan', 'Kiribati', 'Saint Kitts and Nevis', 'Kuwait', 'Lebanon', 'Libya', 'Liechtenstein', 'Lesotho', 'Luxembourg', 'Macao', 'Morocco', 'Moldova, Republic of', 'Maldives', 'Marshall Islands', 'Mali', 'Myanmar', 'Mongolia', 'Mozambique', 'Montserrat', 'Mauritius', 'Malaysia', 'Namibia', 'Niger', 'Nigeria', 'Niue', 'Norway', 'Nauru', 'Oman', 'Panama', 'Peru', 'Palau', 'Poland', 'Portugal', 'Paraguay', 'French Polynesia', 'Reunion', 'Russian Federation', 'Saudi Arabia', 'Senegal', 'South Georgia and the South Sandwich Islands', 'Saint Helena, Ascension and Tristan da Cunha', 'Saint Helena, Ascension and Tristan da Cunha', 'Svalbard and Jan Mayen', 'Sierra Leone', 'San Marino', 'Saint Pierre and Miquelon', 'South Sudan', 'Suriname', 'Slovenia', 'Swaziland', 'Seychelles', 'Turks and Caicos Islands', 'Togo', 'Tajikistan', 'Turkmenistan', 'Tonga', 'Trinidad and Tobago', 'Turkey', 'Taiwan', 'Uganda', 'United States Minor Outlying Islands', 'United States', 'Holy See (Vatican City State)', 'Saint Vincent and the Grenadines', 'Virgin Islands, British', 'Vietnam', 'Wallis and Futuna', 'Kosovo', 'South Africa', 'Zimbabwe') then 'United States'
+          else trim(home) end as home,
+          runTime as runTime
+      from cherryblossomX
+      group by home
+      ")
+
+# getting the ISO codes from package 'maps'
+dat <- iso3166
+cherryblossom_country_runtimes <- sqldf("select d.a3, d.mapname, avg(x.runTime) as runTime from summary_table x join dat d on x.home = d.ISOname group by d.a3, d.mapname")
+
+map <- ne_countries(scale = "medium", returnclass = "sf")
+# Joining cross-walked ISO names to the map through the code names
+runners_map <- merge(map, cherryblossom_country_runtimes, by.x = "adm0_a3", by.y = "a3", all = TRUE)
+
+# global map
+assoc_graph <- ggplot(data = runners_map) +
+  geom_sf(aes(fill = runTime), 
+          position = "identity") + 
+  labs(fill='Average\nCompletion Time', caption = paste(
+      'Figure 1:\n',
+      'Global Race Completion Times', sep=''))  +
+  scale_fill_viridis_c(option = "viridis") +
+   ggtitle('Average Race Completion Time, by Country')
+
+assoc_graph + theme_map()
+
+cherryblossomStates = cherryblossom
+
+# Recoding the states to a unified location.
+states_summary_table = sqldf("
+      select 
+      case when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AL',',AL') then 'AL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AK',',AK') then 'AK'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AZ',',AZ') then 'AZ'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' AR',',AR') then 'AR'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CA',',CA') then 'CA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CO',',CO') then 'CO'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' CT',',CT') then 'CT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' DE',',DE') then 'DE'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' FL',',FL') then 'FL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' GA',',GA') then 'GA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' HI',',HI') then 'HI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ID',',ID') then 'ID'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IL',',IL') then 'IL'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IN',',IN') then 'IN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' IA',',IA') then 'IA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' KS',',KS') then 'KS'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' KY',',KY') then 'KY'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' LA',',LA') then 'LA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ME',',ME') then 'ME'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MD',',MD') then 'MD'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MA',',MA') then 'MA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MI',',MI') then 'MI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MN',',MN') then 'MN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MS',',MS') then 'MS'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MO',',MO') then 'MO'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' MT',',MT') then 'MT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NE',',NE') then 'NE'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NV',',NV') then 'NV'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NH',',NH') then 'NH'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NJ',',NJ') then 'NJ'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NM',',NM') then 'NM'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NY',',NY') then 'NY'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' NC',',NC') then 'NC'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' ND',',ND') then 'ND'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OH',',OH') then 'OH'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OK',',OK') then 'OK'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' OR',',OR') then 'OR'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' PA',',PA') then 'PA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' RI',',RI') then 'RI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' SC',',SC') then 'SC'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' SD',',SD') then 'SD'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' TN',',TN') then 'TN'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' TX',',TX') then 'TX'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' UT',',UT') then 'UT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' VT',',VT') then 'VT'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' VA',',VA',' VI',',VI') then 'VA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WA',',WA') then 'WA'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WV',',WV') then 'WV'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WI',',WI') then 'WI'
+when substr( trim(home), length(trim(home))-2, length(trim(home)) ) in (' WY',',WY') then 'WY'
+when trim(home) = 'Wyoming' then 'WY'
+when trim(home) = 'California' then 'CA'
+when trim(home) = 'Indiana' then 'IN'
+          else NULL end as home,
+          runTime as runTime
+      from cherryblossomStates
+      group by home
+      ")
+
+states_summary_table1 = na.omit(states_summary_table)
+
+cherryblossom_sates_runtimes <- sqldf("select home as state, avg(runTime) as runTime from states_summary_table1 group by state")
+
+# plotting the state-wide data. The only requirement is that the states have a column name 'state' filled with only the abbreviaitons
+plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALSE)   +
+  scale_fill_viridis_c(option = "viridis") + 
+  theme(legend.position = "right") + 
+  theme(panel.background = element_rect(colour = "black")) + 
+  labs(fill='Average Race Completion Time', title = "Average Race Completion Time, by US State", caption = paste(
+      'Figure 2:\n',
+      'Statewide Race Completion Times', sep=''))
+
+# making runTime subset
+just_runTime = cherryblossom[c(1,6)]
+# aggregating runTimes by year using the mean value
+runTime_by_year = aggregate(just_runTime, by = list(just_runTime$year), FUN = mean)
+# aggregating the rowcount by year
+participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = length)
+
+# linear trend lines
+participation_lm = lm(year ~ Group.1, data = participation)
+runTime_lm = lm(runTime ~ year, data = runTime_by_year)
+
+#visualizing particiaption
+library(ggplot2)
+p = ggplot(participation, aes(Group.1, runTime)) + 
+  labs(title = 'Cherry Blossom Race Participation', caption = 'Figure 3: Cherry Blossom race participation with linear trend line') +
+  xlab('Year') + ylab('Number of Participants') +
+  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
+  scale_x_discrete(name = 'Year', limits = c(1999:2012))
+p + geom_line() + geom_point() +
+  geom_line(aes(y= participation_lm$fitted.values), color = 'blue', linetype = 'dotted') 
+
+# visualizing race completion times
+p = ggplot(runTime_by_year, aes(year, runTime)) + 
+  labs(title = 'Average Run Time 1999 - 2012', caption = 'Figure 4: Average race finish time with linear trend line') +
+  xlab('Year') + ylab('Average Finish Time (minutes)') +
+  theme(plot.title = element_text(hjust = .5), plot.caption = element_text(hjust = 0)) +
+  scale_x_discrete(name = 'Year', limits = c(1999:2012))
+p + geom_line() + geom_point() +
+  geom_line(aes(y = runTime_lm$fitted.values), color = 'blue', linetype = 'dotted')
+
+# quantifying the corrleation between participation and completion time
+cor(runTime_by_year$runTime, participation$runTime)
+
+
+
 ```
 
