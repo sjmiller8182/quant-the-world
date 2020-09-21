@@ -43,13 +43,13 @@ We collect and clean this data to provide the Men's and Women's information in a
 
 ### Data Collection
 
-In this case study, we collected data on participants in the Cherry Blossom Race. We scraped the data for Men and Woman from 1999 to 2012. The data was stored under the base address in the following form, where the year is between 1999 and 2012 and page is a specific page name.
+In this case study, we collected data on participants in the Cherry Blossom Race. We scraped the data for men and women from 1999 to 2012. The data was stored under the base address in the following form, where the year is between 1999 and 2012 and page is a specific page name.
 
 ```
 http://www.cherryblossom.org/results/<year>/<page>
 ```
 
-The specific addresses where the data is stored are given in table 1. While the structure follows `results/<year>` consistently, the page naming for each year is not consistent. In some cases, the names for the men's and women's pages are `men` and `women`, repectively. In other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` repectively.
+The specific addresses where the data is stored are given in table 1. While the structure follows `results/<year>` consistently, the page naming for each year is not consistent. In some cases, the names for the men's and women's pages are `men` and `women`, respectively. In other cases, a code is used such as `cb99m` and `cb99f` in 1999 for `men` and `women` respectively.
 \newpage
 **Table 1. Web Pages**
 
@@ -143,7 +143,7 @@ extractResTable =
     writeLines(els, con = file)
   }
 
-
+# turn the text data into a list of matrices
 years = 1999:2012
 menTables = mapply(extractResTable, url = urls, year = years)
 names(menTables) = years
@@ -156,6 +156,7 @@ The data are successfully scraped from the urls that are given and we observe th
 
 
 ```{r, echo = TRUE, inlcude = T, results='asis'}
+# extractResTable can gather results for a single year, or multiple
 men_2009<-extractResTable(url = urls[11], year = 2009, sex = 'male')
 men_2009[1:10]
 ```
@@ -165,17 +166,19 @@ We observe the formatting of the text data, such as the use of the `=` character
 
 A function `findColLocs` was defined to use these space indices to locate the begin points for data throughout the extracted text data. `selectCols` is a tool that uses `findColLocs` to locate the data points for each column throughout the text for all of the race years. Our functions extracted almost all of the age data fomr the text, which aided in the identification errors within the dataset. To generalize this method, we defined a function, `extractVariables`, that combined the various processes we used to preprocess the data into a more machine readable format. 
 
-We now have a list of matrices. The original text data are in a much more machine readable format. Our number of rows for each matrix is equal to the number of original rows, minus the original text header. To perform statistical analyses on the numeric data, we must perform a datatype transformation.
+The execution of the helper functions helped transform the original text data into a much more machine readable format. To perform statistical analyses on the numeric data, we performed datatype transformations, converting relevant data from a character format into a numeric format.
 
-There were anomalies in the data for the year 2003. After an examination of the original data table, we found that the spacing in the year 2003 data is not the same as the other years. We adjusted our `selectCols` function to better capture the data for 2003. We also observe anomalies in the formatting of the year 2001. We introduced fixes and re-scraped the data once more to form the list of matrices called `menResMat`.
+This transformation revealed anomalies in the data for the year 2003. After an examination of the original data table, we found that the spacing in the year 2003 data is not the same as the other years. We adjusted our `selectCols` function to better capture the data for 2003. We also observe anomalies in the formatting of the year 2001. We introduced fixes and re-scraped the data once more to form the list of matrices called `menResMat`.
 
 ```{r}
+# find the row index where '===' can be found
 equals_idx<- grep('^===', men_2009)
 equals_idx
 
 equals_idx2<- substr(men_2009, 1,3)
 which(equals_idx2 == '===')
 
+#use the location of '===' to identify the spacer and header
 spacerRow<- men_2009[equals_idx]
 headerRow<- men_2009[equals_idx -1]
 body<- men_2009[-(1:equals_idx)] # working with 2009 body
@@ -185,6 +188,7 @@ head(body)
 ```
 
 ```{r}
+# transform the header to lower case to standardize it
 headerRow<- tolower(headerRow)
 headerRow
 ```
@@ -196,6 +200,7 @@ ageStart<- regexec('ag', headerRow, fixed = TRUE)
 ```
 
 ```{r}
+# extract age data from the text
 age<- substr(body, start = 49, stop = 50)
 head(age)
 ```
@@ -211,6 +216,7 @@ blankLocs<- gregexpr(' ', spacerRow)
 blankLocs
 ```
 ```{r}
+# dientify search indices to find data
 searchLocs<- c(0,blankLocs[[1]])
 searchLocs
 ```
@@ -218,6 +224,7 @@ searchLocs
 
 
 ```{r}
+# extract data using the helper functions
 values<- mapply(substr, list(body), start = searchLocs[-length(searchLocs)] +1, stop = searchLocs[-1] -1)
 length(values)
 head(values)
@@ -226,6 +233,8 @@ head(values)
 
 
 ```{r}
+# a function that finds the column locations using the 
+# previously defined spacing tools
 findColLocs<- function(spacerRow){
   spaceLocs<- gregexpr(' ', spacerRow)[[1]]
   rowLength<- nchar(spacerRow)
@@ -243,6 +252,7 @@ locs_2012
 
 
 ```{r}
+# extracts column data from text
 selectCols = 
 function(colNames, headerRow, searchLocs) 
 {
@@ -263,6 +273,9 @@ function(colNames, headerRow, searchLocs)
 
 
 ```{r}
+# the findColLocs function can be used to find a specific 
+# type of data, such as age
+
 searchLocs = findColLocs(spacerRow)
 ageLoc = selectCols("ag", headerRow, searchLocs) 
 ages = mapply(substr, list(body), 
@@ -273,6 +286,7 @@ summary(as.numeric(ages))
 
 
 ```{r}
+# the tested functions can now be used to form matrices
 shortColNames = c("name", "home", "ag", "gun", "net", "time")
 locCols = selectCols(shortColNames, headerRow, searchLocs)
 
@@ -290,6 +304,7 @@ tail(Values)[ , 1:3]
 
 
 ```{r}
+# a function to extract all variables from the menTables data
 extractVariables = 
   function(file, varNames =c("name", "home", "ag", "gun",
                              "net", "time"))
@@ -313,7 +328,7 @@ extractVariables =
 }
 ```
 ```{r}
-
+# assign names and extract the data into a list of matrices
 years = 1999:2012
 menTables = mapply(extractResTable, url = urls, year = years)
 names(menTables) = years
@@ -322,6 +337,7 @@ names(menTables) = years
 
 
 ```{r}
+# menResMat is a list of matrices containing race data 
 menResMat = lapply(menTables, extractVariables)
 length(menResMat)
 
@@ -331,20 +347,23 @@ sapply(menResMat, nrow)
 
 
 ```{r}
+# transforming the age to a numeric format
 age = as.numeric(menResMat[['2012']][ , 'ag'])
 
 tail(age)
-
+# applying the transformation to all matrices
 age = sapply(menResMat,
              function(x) as.numeric(x[ , 'ag']))
 
 ```
 
 ```{r, include = TRUE}
+# visualizing 'age' to check for anomalies 
 boxplot(age, ylab = "Age", xlab = "Year",
         main = 'Anomalies in Age Data')
 ```
 ```{r}
+# adjusting the selectCols function to catch more age data
 selectCols = function(shortColNames, headerRow, searchLocs) {
   sapply(shortColNames, function(shortName, headerRow, searchLocs){
     startPos = regexpr(shortName, headerRow)[[1]]
@@ -358,12 +377,14 @@ selectCols = function(shortColNames, headerRow, searchLocs) {
 
 
 ```{r}
+# examining the data for 2001
 age2001 = age[["2001"]]
 
 grep("^===", menResMat['2001'])
 
 badAgeIndex = which(is.na(age2001)) + 5
 
+# adjusting the extractVariables function to make it more performant
 extractVariables = 
 function(file, varNames =c("name", "home", "ag", "gun",
                            "net", "time"))
@@ -403,18 +424,22 @@ The end result was a dataframe called `menDF`.
 With this process complete, we simply re-used the functions on the women's data. 
 
 ```{r}
+# applying datatype transformations again
 age<- sapply(menResMat, function(x) as.numeric(x[, 'ag']))
 ```
 
 ```{r}
+# counting na values
 sapply(age, function(x) sum(is.na(x)))
 ```
 
 ```{r}
+# visualizing results to check for anomalies
 boxplot(age, ylab = "Age", xlab = "Year")
 ```
 
 ```{r}
+# removing young outliers under 10 years old
 young<- menResMat[['2001']][,'ag'] < 10
 menResMat[['2001']]<- menResMat[['2001']][-c(young),]
 y2002<- menResMat[['2002']][,'ag'] < 10
@@ -426,9 +451,11 @@ y2003<- menResMat[['2003']][,'ag'] < 10
 ```
 
 ```{r}
+# transforming the list of matrices into a dataframe
 menResDF = lapply(menResMat, data.frame)
 ```
 ```{r}
+# creating rows to identify each year
 col_1999 = rep(1999, nrow(menResDF$`1999`))
 
 col_2000 = rep(2000, nrow(menResDF$`2000`))
@@ -461,6 +488,7 @@ cols = c(col_1999, col_2000, col_2001, col_2002, col_2003, col_2004, col_2005, c
 ```
 
 ```{r}
+# building dataframe with year column
 menResFinal = data.frame()
 for (i in 1:length(names(menResDF))) {
   
@@ -472,12 +500,14 @@ menResFinal$Date<- cols
 
 
 ```{r}
+# transforming the age column to numeric
 menResFinal$ag = as.numeric(menResFinal$ag)
 sum(is.na(menResFinal$ag))
 ```
 
 
 ```{r, include = FALSE}
+# identifying a method for transforming the times data
 times = menResFinal$time
 timePieces = strsplit(as.character(times), ":")
 
@@ -488,6 +518,7 @@ head(timePieces)
 ```
 
 ```{r}
+# a function to transform the time data into a standard minute format
 runTime = sapply(timePieces, 
                  function(x) {
                    if (length(x) == 2) x[1] + x[2]/60
@@ -497,6 +528,7 @@ runTime = sapply(timePieces,
 summary(runTime)
 ```
 ```{r}
+# generalizing the tiem transformation process and applying it
 convertTime = function(time) {
   timePieces = strsplit(time, ":")
   timePieces = sapply(timePieces, as.numeric)
@@ -508,6 +540,7 @@ convertTime = function(time) {
 ```
 
 ```{r, include = FALSE}
+# a function creating the final dataframe
 createDF = function(Res, year, sex) 
 {
   # Determine which time to use
@@ -537,16 +570,18 @@ menDF = mapply(createDF, menResMat, year = 1999:2012,
 
 
 ```{r}
+# checking menDF for anomalies
 sapply(menDF, function(x) sum(is.na(x$runTime)))
-
+# fixing spacing anomalies in the 2006 data
 separatorIdx = grep("^===", menTables[["2006"]])
 separatorRow = menTables[['2006']][separatorIdx]
 separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
                       substring(separatorRow, 65, nchar(separatorRow)), 
                       sep = "")
 menTables[['2006']][separatorIdx] = separatorRowX
-
+# applying the spacing fix to recreate menResMat
 menResMat = sapply(menTables, extractVariables)
+# recreating menDF
 menDF = mapply(createDF, menResMat, year = 1999:2012,
                sex = rep("M", 14), SIMPLIFY = FALSE)
 ```
@@ -554,6 +589,7 @@ menDF = mapply(createDF, menResMat, year = 1999:2012,
 
 
 ```{r}
+# importing the data for women
 womenURLs = 
   c("results/1999/cb99f.html", "results/2000/Cb003f.htm", "results/2001/oof_f.html",
     "results/2002/ooff.htm", "results/2003/CB03-F.HTM",
@@ -566,6 +602,7 @@ womenURLs =
 
 years = 1999:2012
 urls = paste(ubase, womenURLs, sep = "")
+# saving extracted text data
 womenTables = mapply(extractResTable, url = urls, year = years, sex='female')
 names(womenTables) = years
 sapply(womenTables, length)
@@ -573,6 +610,7 @@ sapply(womenTables, length)
 
 
 ```{r, inlcude = FALSE}
+# applying the same fixes to the women's data as was done to the men
 separatorIdx = grep("^===", womenTables[["2006"]])
 separatorRow = womenTables[['2006']][separatorIdx]
 separatorRowX = paste(substring(separatorRow, 1, 63), " ",
@@ -581,8 +619,9 @@ separatorRowX = paste(substring(separatorRow, 1, 63), " ",
 womenTables[['2006']][separatorIdx] = separatorRowX
 
 womenTables[['2001']][2:3] = womenTables[['2002']][2:3]
-
+# making list of matrices of women's data
 womenResMat = sapply(womenTables, extractVariables)
+# transforming list of matrices into dataframe
 womenDF = mapply(createDF, womenResMat, year = 1999:2012,
                sex = rep("W", 14), SIMPLIFY = FALSE)
 ```
@@ -590,18 +629,21 @@ womenDF = mapply(createDF, womenResMat, year = 1999:2012,
 
 
 ```{r}
+# checking age for na values
 sapply(womenDF, function(x) sum(is.na(x$age)))
 ```
 
 
 
 ```{r}
+# checking runTime for na values
 sapply(womenDF, function(x) sum(is.na(x$runTime)))
 ```
 
 
 
 ```{r}
+# removing na values because there are so few
 menDF_complete = na.omit(menDF)
 womenDF_complete = na.omit(womenDF)
 ```
@@ -609,6 +651,7 @@ womenDF_complete = na.omit(womenDF)
 
 
 ```{r}
+# copying the men's data dataframe into a single dataframe 
 cherryblossom = data.frame()
 for (i in 1:14) {
   
@@ -619,6 +662,7 @@ head(cherryblossom)
 ```
 
 ```{r}
+# copying the women's data into the cherryblossom dataframe
 for (i in 1:14) {
   
   df<- womenDF_complete[[i]]
@@ -627,6 +671,7 @@ for (i in 1:14) {
 tail(cherryblossom)
 ```
 ```{r}
+# checking for na values
 sum(is.na(cherryblossom))
 ```
 
@@ -637,6 +682,7 @@ Additionally, because most of the addresses were not in standard format, we conv
 Our dataset is complete, clean, and ready for further analysis.
 
 ```{r}
+# removing na values
 cherryblossom = na.omit(cherryblossom)
 sum(is.na(cherryblossom))
 ```
@@ -876,13 +922,18 @@ plot_usmap(data = cherryblossom_sates_runtimes, values = "runTime",  labels=FALS
 The Cherry Blossom race has experienced growth since the year 2000 as indicated by the linear trend line in Fig. 3, below.
 
 ```{r, include = T, message = F, fig.height=3.5}
+# making runTime subset
 just_runTime = cherryblossom[c(1,6)]
+# aggregating runTimes by year using the mean value
 runTime_by_year = aggregate(just_runTime, by = list(just_runTime$year), FUN = mean)
+# aggregating the rowcount by year
 participation = aggregate(just_runTime, by = list(just_runTime$year), FUN = length)
 
 # linear trend lines
 participation_lm = lm(year ~ Group.1, data = participation)
 runTime_lm = lm(runTime ~ year, data = runTime_by_year)
+
+#visualizing particiaption
 library(ggplot2)
 p = ggplot(participation, aes(Group.1, runTime)) + 
   labs(title = 'Cherry Blossom Race Participation', caption = 'Figure 3: Cherry Blossom race participation with linear trend line') +
@@ -898,6 +949,7 @@ p + geom_line() + geom_point() +
 The average race completion time for all ages and genders has also experienced a positive trend. The correlation between race participation and the average race completion time is 92.78%. This is indicated in Fig. 4, below.
 
 ```{r, include = T, message = F, fig.height=3.5}
+# visualizing race completion times
 p = ggplot(runTime_by_year, aes(year, runTime)) + 
   labs(title = 'Average Run Time 1999 - 2012', caption = 'Figure 4: Average race finish time with linear trend line') +
   xlab('Year') + ylab('Average Finish Time (minutes)') +
@@ -907,6 +959,7 @@ p + geom_line() + geom_point() +
   geom_line(aes(y = runTime_lm$fitted.values), color = 'blue', linetype = 'dotted')
 ```
 ```{r}
+# quantifying the corrleation between participation and completion time
 cor(runTime_by_year$runTime, participation$runTime)
 ```
 
