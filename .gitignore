@@ -9,6 +9,12 @@ case_study_1/real-time_location_system_case_study_files/
 case_study_2/web_scrape_files/
 
 # case study 3 ignores
+case_study_3/data/SpamAssassinMessages.zip
+case_study_3/data/easy_ham/
+case_study_3/data/easy_ham_2/
+case_study_3/data/hard_ham/
+case_study_3/data/spam/
+case_study_3/data/spam_2/
 case_study_3/SpamAssassinMessages.zip
 case_study_3/easy_ham/
 case_study_3/easy_ham_2/
