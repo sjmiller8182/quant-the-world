@@ -202,6 +202,255 @@ head(sampleSplit[[1]]$body)
 ```
 
 
+```{r Strip and Label, echo=T}
+words = words[ !( words %in% stopWords) ]
+words[0:15]
+
+# Function to remove numbers, punctuation, and other undesirables
+cleanText = function(msg){
+  tolower(gsub("[[:punct:]0-9[:space:][:blank:]]+", " ", msg))
+}
+
+messageVerbiage = function(msg, stopWords){
+ if(is.null(msg))
+  return(character())
+
+ words = unique(unlist(strsplit(cleanText(msg), "[[:blank:]\t]+")))
+ 
+ # drop stopwords
+ words = words[ nchar(words) > 1]
+ words = words[ !( words %in% stopWords) ]
+ invisible(words)
+}
+
+# Given directory and stop words, this extracts all email verbiage
+getVerbiage = function(dirName, stopWords){
+  # List all files in the directory
+  fileNames = list.files(dirName, full.names = TRUE)
+  
+  # Remove all data except the emails
+  notEmail = grep("cmds$", fileNames)
+  if ( length(notEmail) > 0) fileNames = fileNames[ - notEmail ]
+
+  messages = lapply(fileNames, readLines, encoding = "latin1")
+  
+  # break out the email message
+  emailSplit = lapply(messages, splitMessage)
+
+  bodyList = lapply(emailSplit, function(msg) msg$body)
+  headerList = lapply(emailSplit, function(msg) msg$header)
+  rm(emailSplit)
+  
+  # Email including attachment
+  hasAttach = sapply(headerList, function(header) {
+    CTloc = grep("Content-Type", header)
+    if (length(CTloc) == 0) return(0)
+    multi = grep("multi", tolower(header[CTloc])) 
+    if (length(multi) == 0) return(0)
+    multi
+  })
+  
+  hasAttach = which(hasAttach > 0)
+  
+  # Get boundarys string in the emails
+  boundaries = sapply(headerList[hasAttach], getBoundary)
+  
+  # Drop attachments from the email bodies
+  bodyList[hasAttach] = mapply(dropAttach, bodyList[hasAttach], 
+                               boundaries, SIMPLIFY = FALSE)
+  
+  # Get the message verbiage
+  messageWordsList = lapply(bodyList, messageVerbiage, stopWords)
+  
+  invisible(messageWordsList)
+}
+
+massagesWordsList = lapply(filldirNames, getVerbiage, stopWords = stopWords) # All valid words from all the emails
+
+numbaMassages = sapply(massagesWordsList, length)
+
+# First three directories are emails and last two are spam. The five lists are unpacked into one.
+isSpam = rep(c(FALSE, FALSE, FALSE, TRUE, TRUE), numbaMassages) # Identify the false messages
+
+massagesWordsList = unlist(massagesWordsList, recursive = FALSE) # All valid words from all the emails
+```
+
+
+```{r Simple Bayes Classification, echo=T}
+
+emailCnt = length(isSpam)
+spamCnt = sum(isSpam)
+legitCnt = emailCnt - spamCnt
+
+set.seed(43)
+
+### Test and train split
+
+# Random-downsample to 25% without replacement
+testSpamIdx = sample(spamCnt, size = floor(spamCnt*0.25))
+testLegitIdx = sample(legitCnt, size = floor(legitCnt*0.25))
+
+# split out into test and train data
+testMessageWords = c((massagesWordsList[isSpam])[testSpamIdx],(massagesWordsList[!isSpam])[testHamIdx] )
+trainMessageWords = c((massagesWordsList[isSpam])[ - testSpamIdx],(massagesWordsList[!isSpam])[ - testHamIdx])
+
+testSpam = rep(c(TRUE, FALSE), c(length(testSpamIdx), length(testHamIdx)))
+unique(testSpam)
+
+trainSpam = rep(c(TRUE, FALSE), c(numSpam - length(testSpamIdx), numHam - length(testHamIdx)))
+unique(trainSpam)
+```
+
+```{r Probability Estimation on Training Data, echo=T}
+# number of unique words in training data
+wordsUnique = unique(unlist(trainMessageWords))
+length(wordsUnique)
+
+# number of occurrences of each unique word in the spam message
+spamWordCounts = rep(0, length(wordsUnique))
+names(spamWordCounts) = wordsUnique
+
+trainWords = lapply(trainMessageWords[trainSpam], unique)
+trainTable = table(unlist(trainWords))
+spamWordCounts[names(trainTable)] = trainTable
+
+# number of occurrences of spam and non-spam for each word in the list.
+spamVnotSpam = function(wordsList, spam, wordsUnique = unique(unlist(wordsList))){
+  # table for spam, non-spam, and log odds
+  wordTable = matrix(0.5, nrow = 4, ncol = length(wordsUnique), dimnames = list(c("spam", "non-spam", "presentLogOdds", "absentLogOdds"),  wordsUnique))
+
+  # word count increases by one for each spam message there is
+  spamWordCnt = table(unlist(lapply(wordsList[spam], unique)))
+  wordTable["spam", names(spamWordCnt)] = spamWordCnt + 1
+
+  # word count increases by one for each non-spam message there is
+  legitWordCnt = table(unlist(lapply(wordsList[!spam], unique)))  
+  wordTable["non-spam", names(legitWordCnt)] = legitWordCnt + 1
+
+  # number of spam and non-spam
+  spamCnt = sum(spam)
+  hamCnt = length(spam) - spamCnt
+
+  wordTable["spam",] = wordTable["spam",]/(spamCnt + .5) # probability of non-spam given spam
+  wordTable["non-spam",] = wordTable["non-spam",]/(hamCnt + .5) # probability of spam given non-spam
+  
+  # log odds
+  wordTable["presentLogOdds",] = log(wordTable["spam",]) - log(wordTable["non-spam", ])
+  wordTable["absentLogOdds",] = log((1 - wordTable["spam",])) - log((1 -wordTable["non-spam",]))
+
+  invisible(wordTable)
+}
+
+
+
+### Apply spamVnotSpam function to training data
+trainTable = spamVnotSpam(trainMessageWords, trainSpam)
+trainTable[,1:5]
+
+```
+
+```{r Classify Test Dataset, echo=T}
+# There may be words not in training data. This calculates log odds without new words.
+# The first message is spam, and the log likelihood is positive.
+newMessage = testMessageWords[[1]]
+
+newMessage = newMessage[!is.na(match(newMessage, colnames(trainTable)))]
+
+present = colnames(trainTable) %in% newMessage
+
+sum(trainTable["presentLogOdds", present]) + sum(trainTable["absentLogOdds", !present])
+
+# A negative value with a large log likelihood ratio is in this non-spam message
+newMessage = testMessageWords[[which(!testSpam)[1]]]
+newMessage = newMessage[!is.na(match(newMessage, colnames(trainTable)))]
+present = (colnames(trainTable) %in% newMessage)
+sum(trainTable["presentLogOdds", present]) + sum(trainTable["absentLogOdds", !present])
+
+# function to find log likelihood:
+getLogLikelihood = function(words, freqTable){
+  # remove words not in the training data
+  words = words[!is.na(match(words, colnames(freqTable)))]
+
+  # get words that DO appear in training data
+  present = colnames(freqTable) %in% words
+
+  sum(freqTable["presentLogOdds", present]) + sum(freqTable["absentLogOdds", !present])
+}
+
+
+# box plots of log likelihoods
+testLogLikelihood = sapply(testMessageWords, getLogLikelihood, trainTable)
+tapply(testLogLikelihood, testSpam, summary)
+
+# generate the box plot
+SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
+boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly Selected Messages\n by  Classification", ylim=c(-500, 500))
+
+
+# misclassification rate and using reference value tau
+type_1_Error = function(tau, logLikelihoodVals, spam){
+  classify = logLikelihoodVals > tau
+  sum(classify & !spam)/sum(!spam)
+}
+
+# tau = 0
+type_1_Error(0, testLogLikelihood,testSpam)
+
+# tau = -20
+type_1_Error(-20, testLogLikelihood,testSpam)
+
+type_1_Error = function(logLikelihoodVals, isSpam){
+  orderVals = order(logLikelihoodVals)
+  logLikelihoodVals = logLikelihoodVals[orderVals]
+  isSpam = isSpam[orderVals]
+
+  idx = which(!isSpam)
+  N = length(idx)
+  list(error = (N:1)/N, values = logLikelihoodVals[idx])
+}
+
+type_2_Error = function(logLikelihoodVals, isSpam){
+    
+  orderVals = order(logLikelihoodVals)
+  logLikelihoodVals =  logLikelihoodVals[orderVals]
+  isSpam = isSpam[orderVals]
+
+  idx = which(isSpam)
+  N = length(idx)
+  list(error = (1:(N))/N, values = logLikelihoodVals[idx])
+}
+
+# Get tau so one type of error is within 1% using 5-fold cross-validation.
+k = 5
+trainCnt = length(trainMessageWords)
+partK = sample(trainCnt)
+total = k * floor(trainCnt/k)
+partK = matrix(partK[1:total], ncol = k)
+
+testFoldOdds = NULL
+for (i in 1:k){
+  foldIdx = partK[,i]
+  trainTabFold = spamVnotSpam(trainMessageWords[-foldIdx], trainSpam[-foldIdx])
+  testFoldOdds = c(testFoldOdds, sapply(trainMessageWords[foldIdx], getLogLikelihood, trainTabFold))
+}
+
+testFoldSpam = NULL
+for (i in 1:k){
+  foldIdx = partK[,i]
+  testFoldSpam = c(testFoldSpam, trainSpam[foldIdx])
+}
+
+xFoldI = type_1_Errors(testFoldOdds, testFoldSpam)
+xFoldII = typeIIErrorRates(testFoldOdds, testFoldSpam)
+tauFoldI = round(min(xFoldI$values[xFoldI$error <= 0.01]))
+tauFoldI
+
+tFold2 = xFoldII$error[ xFoldII$values < tauFoldI ]
+max(tFold2)
+
+```
+
+
 
 
 
