@@ -154,6 +154,49 @@ getBoundry <- function(header){
 # sample message with a PGP signature
 sampleSplit[[12]]$body
 
+# search for boundary of msg 15
+boundary = getBoundary(headerList[[15]]) 
+body = sampleSplit[[15]]$body
+
+# locating beginning string
+bString = paste("--", boundary, sep = "")
+bStringLocs = which(bString == body)
+bStringLocs
+
+# locating ending string
+eString = paste("--", boundary, "--", sep = "")
+eStringLoc = which(eString == body)
+eStringLoc
+
+# separating the body of the message
+msg = body[ (bStringLocs[1] + 1) : (bStringLocs[2] - 1)]
+tail(msg)
+
+msg = c(msg, body[ (eStringLoc + 1) : length(body) ])
+tail(msg)
+
+# function that drops attachments
+dropAttach = function(body, boundary){
+  
+  bString = paste("--", boundary, sep = "")
+  bStringLocs = which(bString == body)
+  
+  if (length(bStringLocs) <= 1) return(body)
+  
+  eString = paste("--", boundary, "--", sep = "")
+  eStringLoc = which(eString == body)
+  if (length(eStringLoc) == 0) 
+    return(body[ (bStringLocs[1] + 1) : (bStringLocs[2] - 1)])
+  
+  n = length(body)
+  if (eStringLoc < n) 
+     return( body[ c( (bStringLocs[1] + 1) : (bStringLocs[2] - 1), 
+                    ( (eStringLoc + 1) : n )) ] )
+  
+  return( body[ (bStringLocs[1] + 1) : (bStringLocs[2] - 1) ])
+}
+
+head(sampleSplit[[1]]$body)
 
 
 ```
