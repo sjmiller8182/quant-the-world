@@ -28,7 +28,7 @@ editor_options:
 ---
 
 ```{r}
-install.packages("tm")
+# install.packages("tm")
 library("tm")
 ```
 
@@ -145,7 +145,7 @@ header[boundaryIdx]
 sub(".*boundary=\"? *(.*)\"?;?.*", "\\1", header[boundaryIdx])
 
 # a function to find boundaries
-getBoundry <- function(header){
+getBoundary <- function(header){
   boundaryIdx <- grep('boundary=', header)
   boundary = gsub('"', "", header[boundaryIdx])
   gsub(".*boundary= *([^;]*);?.*", "\\1", boundary)
@@ -203,15 +203,26 @@ head(sampleSplit[[1]]$body)
 
 
 ```{r Strip and Label, echo=T}
+# load stopwords function
+stopWords = stopwords()
+# applying same text pre-processing to stopwords as emails
+cleanSW = tolower(gsub("[[:punct:]0-9[:blank:]]+", " ", stopWords))
+SWords = unlist(strsplit(cleanSW, "[[:blank:]]+"))
+SWords = SWords[ nchar(SWords) > 1 ]
+stopWords = unique(SWords)
+
 words = words[ !( words %in% stopWords) ]
 words[0:15]
+
 
 # Function to remove numbers, punctuation, and other undesirables
 cleanText = function(msg){
   tolower(gsub("[[:punct:]0-9[:space:][:blank:]]+", " ", msg))
 }
 
-messageVerbiage = function(msg, stopWords){
+# function that extracts words from message body
+findMsgWords = 
+  function(msg, stopWords){
  if(is.null(msg))
   return(character())
 
@@ -224,7 +235,7 @@ messageVerbiage = function(msg, stopWords){
 }
 
 # Given directory and stop words, this extracts all email verbiage
-getVerbiage = function(dirName, stopWords){
+processAllWords = function(dirName, stopWords){
   # List all files in the directory
   fileNames = list.files(dirName, full.names = TRUE)
   
@@ -260,19 +271,21 @@ getVerbiage = function(dirName, stopWords){
                                boundaries, SIMPLIFY = FALSE)
   
   # Get the message verbiage
-  messageWordsList = lapply(bodyList, messageVerbiage, stopWords)
+  messageWordsList = lapply(bodyList, findMsgWords, stopWords)
   
   invisible(messageWordsList)
 }
 
-massagesWordsList = lapply(filldirNames, getVerbiage, stopWords = stopWords) # All valid words from all the emails
+# All valid words from all the emails
+messageWordsList = lapply(filldirNames, processAllWords, stopWords = stopWords) 
 
-numbaMassages = sapply(massagesWordsList, length)
+numbaMessages = sapply(messageWordsList, length)
 
 # First three directories are emails and last two are spam. The five lists are unpacked into one.
-isSpam = rep(c(FALSE, FALSE, FALSE, TRUE, TRUE), numbaMassages) # Identify the false messages
+isSpam = rep(c(FALSE, FALSE, FALSE, TRUE, TRUE), numbaMessages) # Identify the false messages
 
-massagesWordsList = unlist(massagesWordsList, recursive = FALSE) # All valid words from all the emails
+# All valid words from all the emails
+messageWordsList = unlist(messageWordsList, recursive = FALSE) 
 ```
 
 
