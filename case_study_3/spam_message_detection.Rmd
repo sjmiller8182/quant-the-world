@@ -27,10 +27,29 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
+```{r, include=FALSE, echo=FALSE}
+library(tidyverse)
 library("tm")
 ```
 
+
+# Introduction
+
+
+
+
+# Methods
+
+## Data
+
+* SpamAssassin
+* Categories
+
+## Modeling
+
+* NB
+* Decision Trees (rpart)
+* pick another one
 
 ```{r, read_data, include=FALSE}
 # video 1
@@ -201,7 +220,7 @@ head(sampleSplit[[1]]$body)
 ```
 
 
-```{r Strip and Label, echo=T}
+```{r Strip and Label, echo=T, include=F, warning=FALSE}
 # load stopwords function
 stopWords = stopwords()
 # applying same text pre-processing to stopwords as emails
@@ -210,7 +229,7 @@ SWords = unlist(strsplit(cleanSW, "[[:blank:]]+"))
 SWords = SWords[ nchar(SWords) > 1 ]
 stopWords = unique(SWords)
 
-words = words[ !( words %in% stopWords) ]
+words = SWords[ !( SWords %in% stopWords) ]
 words[0:15]
 
 
@@ -288,7 +307,7 @@ messageWordsList = unlist(messageWordsList, recursive = FALSE)
 ```
 
 
-```{r Simple Bayes Classification, echo=T}
+```{r Simple Bayes Classification, echo=F, include=F}
 
 emailCnt = length(isSpam)
 spamCnt = sum(isSpam)
@@ -313,7 +332,7 @@ trainSpam = rep(c(TRUE, FALSE), c(spamCnt - length(testSpamIdx), legitCnt - leng
 unique(trainSpam)
 ```
 
-```{r Probability Estimation on Training Data, echo=T}
+```{r Probability Estimation on Training Data, echo=F, include=F}
 # number of unique words in training data
 wordsUnique = unique(unlist(trainMessageWords))
 length(wordsUnique)
@@ -361,7 +380,12 @@ trainTable[,1:5]
 
 ```
 
-```{r Classify Test Dataset, echo=T}
+
+## Results
+
+
+
+```{r Classify Test Dataset, echo=F, include=F}
 # There may be words not in training data. This calculates log odds without new words.
 # The first message is spam, and the log likelihood is positive.
 newMessage = testMessageWords[[1]]
@@ -394,11 +418,36 @@ getLogLikelihood = function(words, freqTable){
 testLogLikelihood = sapply(testMessageWords, getLogLikelihood, trainTable)
 tapply(testLogLikelihood, testSpam, summary)
 
+
+```
+
+```{r, spam_box_plot, echo=F, warning=F, fig.height=3.5}
+
 # generate the box plot
 SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
-boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly Selected Messages\n by  Classification", ylim=c(-500, 500))
+#boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly #Selected Messages\n by  Classification", ylim=c(-500, 500))
+
+data.frame('testLogLikelihood' = testLogLikelihood,
+           'SPAM_CLASS' = SPAM_CLASS) %>%
+  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
+  geom_boxplot() +
+  ylim(-500,500) +
+  ylab("Log Likelihood Ratio Distribution") +
+  xlab("Message Classification") +
+  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
+  labs(caption = paste(
+      'Figure 1:\n',
+      ' NB', sep='')
+      ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+```
 
 
+```{r, NB_misclassification, echo=F, include=F}
 # misclassification rate and using reference value tau
 type_1_Error = function(tau, logLikelihoodVals, spam){
   classify = logLikelihoodVals > tau
@@ -489,7 +538,19 @@ max(tFold2)
 
 
 
+# Conclusion
 
+
+\newpage
+
+\appendix
+
+
+# Code
+
+```
+Code goes here
+```
 
 
 
