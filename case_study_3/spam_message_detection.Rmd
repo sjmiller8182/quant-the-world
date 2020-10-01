@@ -304,13 +304,13 @@ testSpamIdx = sample(spamCnt, size = floor(spamCnt*0.25))
 testLegitIdx = sample(legitCnt, size = floor(legitCnt*0.25))
 
 # split out into test and train data
-testMessageWords = c((massagesWordsList[isSpam])[testSpamIdx],(massagesWordsList[!isSpam])[testHamIdx] )
-trainMessageWords = c((massagesWordsList[isSpam])[ - testSpamIdx],(massagesWordsList[!isSpam])[ - testHamIdx])
+testMessageWords = c((messageWordsList[isSpam])[testSpamIdx],(messageWordsList[!isSpam])[testLegitIdx] )
+trainMessageWords = c((messageWordsList[isSpam])[ - testSpamIdx],(messageWordsList[!isSpam])[ - testLegitIdx])
 
-testSpam = rep(c(TRUE, FALSE), c(length(testSpamIdx), length(testHamIdx)))
+testSpam = rep(c(TRUE, FALSE), c(length(testSpamIdx), length(testLegitIdx)))
 unique(testSpam)
 
-trainSpam = rep(c(TRUE, FALSE), c(numSpam - length(testSpamIdx), numHam - length(testHamIdx)))
+trainSpam = rep(c(TRUE, FALSE), c(spamCnt - length(testSpamIdx), legitCnt - length(testLegitIdx)))
 unique(trainSpam)
 ```
 
