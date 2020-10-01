@@ -28,7 +28,6 @@ editor_options:
 ---
 
 ```{r}
-# install.packages("tm")
 library("tm")
 ```
 
@@ -453,8 +452,8 @@ for (i in 1:k){
   testFoldSpam = c(testFoldSpam, trainSpam[foldIdx])
 }
 
-xFoldI = type_1_Errors(testFoldOdds, testFoldSpam)
-xFoldII = typeIIErrorRates(testFoldOdds, testFoldSpam)
+xFoldI = type_1_Error(testFoldOdds, testFoldSpam)
+xFoldII = type_2_Error(testFoldOdds, testFoldSpam)
 tauFoldI = round(min(xFoldI$values[xFoldI$error <= 0.01]))
 tauFoldI
 
