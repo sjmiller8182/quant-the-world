@@ -49,14 +49,64 @@ library(MLmetrics)
 
 ## Data
 
-* SpamAssassin
-* Categories
+The data used in this case study consists of 9000 emails classified into spam and non-spam by Apache SpamAssassin
+ (an opensource platform for spam detection)\footnotemark.
+This dataset is provided as a public corpus by the Apache Foundation for spam classification model development\footnotemark.
+SpamAssassin classified the emails into three categories spam, ham, and hard ham 
+ (non-spam emails are also colloquially referred to as ham).
+The emails listed in the hard ham category are legitimate emails, but have characteristics more similar to the spam emails.
+It should be noted that this corpus contains emails from 2002-2006\footnotemark.
+While the dataset may be a useful source for experimenting with spam detection,
+ this corpus may no longer be representative of spam and non-spam emails found in the wild due to age and spam evolution.
+
+\footnotetext{https://spamassassin.apache.org/}
+\footnotetext{https://spamassassin.apache.org/old/publiccorpus/}
+\footnotetext{https://spamassassin.apache.org/old/publiccorpus/readme.html}
+
+### Feature Engineering
+
+While it might be natural to consider the words frequencies of an email to detect spam,
+ there are often a large number of words in a typical corpus vocabulary (10s of thousands),
+ leading to high-dimensional, sparse feature matricies.
+High-dimensional, sparse matricies often do not lead to good modeling results.
+We engineered 29 features from the emails rather than use word frequencies.
+Five example engineered features are given below (the full list is provided in the appendix).
+
+* The number of lines in the email
+* Whether the email is a reply (RE) or not
+* The number of unique characters used in the body
+* Whether the sender name contains an underscore ('_') or not
+* The number of exclaimation points in the email subject line
 
 ## Modeling
 
-* NB
-* Decision Trees (rpart)
-* pick another one
+We experimented with three modeling techniques on this dataset: logistic regression, naive bayes, and parition trees.
+Logistic regression was primary employed as a baseline model.
+Since naive bayes and parition trees can describe non-linear decision boundries,
+ these models could provide better performance than logistic regression.
+
+Since hyperparameters must be selected for naive bayes and parition trees, 
+ we the data into two sets by random sampling: 70% for training and 30% for test.
+Each model was fit with 3-fold cross-validation on the training data to select the hyperparameters 
+ where F1-score was used as the selection criterion.
+The hyperparameters selected for each model are shown in table 1 
+ and the F1-scores from cross-validation are shown in table 2.
+After selecting hyperparameters, we compared the performance of each model on the test set (shown in table 3).
+
+### Hyperparameters
+
+We used normal logistic regression, thus there were no hyperparameters to tune.
+
+For naive bayes, we tuned the following parameters:
+
+* `laplace` - laplace smoothing
+* `usekernel` - if `TRUE` use a kernel density estimate, else use gaussian density estimate
+* `adjust` - if `TRUE` allow the bandwidth of kernel density estimate to be adjusted (more flexiable), else do not allow adjustments
+
+For partition trees, we tuned the following parameters:
+
+* `cp` - minimum decrease in lack of fit for a new split 
+
 
 ```{r, read_data, include=FALSE}
 # video 1
@@ -1194,6 +1244,69 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 
 \appendix
 
+# Engineered Features
+
+The following features were engineered from the emails.
+
+| Number | Feature Description                                                     | Type |
+|--------|-------------------------------------------------------------------------|------|
+| 1       | The number of lines in the email                                        | Logical |
+| 2       | Whether the email is a reply (RE) or not                                | Numeric |
+| 3       | The number of unique characters used in the body                        | Numeric |
+| 4       | Whether the sender name contains an underscore ('_') or not             | Logical |
+| 5       | The number of exclaimation points in the email subject line             | Numeric |
+| 6       | The number of question marks in the email subject line                  | Numeric |
+| 7       | The number of attachements in the email                                 | Numeric |
+| 8      | Whether the email is marked as 'priority' or not                        | Logical |
+| 9       | The number of recipients                                                | Numeric |
+| 10       | The percentage of the email in capital letters                          | Numeric |
+| 11       | Whether "In-Reply-To" is used in the email header or not                | Numeric |
+| 12       | Whether the recipients are listed in sorted order or not                | Logical |
+| 13       | Whether punctuation is used in the email subject line or not            | Logical |
+| 14       | The hour the email was sent                                             | Numeric |
+| 15       | Whether the email contains multipart text                               | Logical |
+| 16       | Whether the email contains images or not or not                         | Logical |
+| 17       | Whether the email is PGP signed or not                                  | Logical |
+| 18       | The percentage of the message that is HTML                              | Numeric |
+| 19       | Whether the email contains a spam word (see list below)                 | Logical |
+| 20       | The number of white space characters in the email subject line          | Numeric |
+| 21       | Whether the email host name is present                                  | Logical |
+| 22       | Whether there are numbers at the end of an email address                | Logical |
+| 23       | Whether there are letters in the email subject line are all capitalized | Logical |
+| 24       | The number of foreward symbols in the email                             | Numeric |
+| 25       | Whether the email is the original message                               | Logical |
+| 26       | Whether the salutation "Dear" is used                                   | Logical |
+| 27       | Whether "wrote:" appears in the email body                              | Logical |
+| 28       | The average length of words in the email body                           | Numeric |
+| 29       | The number of dollar signs in the email body                            | Numeric |
+
+## Spam Words
+
+The following words were considered spam words for feature 19.
+
+* "viagra"
+* "pounds"
+* "free"
+* "weight"
+* "guarantee"
+* "million"
+* "dollars"
+* "credit"
+* "risk"
+* "prescription"
+* "generic"
+* "drug",
+* "financial"
+* "save"
+* "dollar"
+* "erotic"
+* "million"
+* "barrister",
+* "beneficiary"
+* "easy", 
+* "money back"
+* "money"
+* "credit card"
 
 # Code
 
