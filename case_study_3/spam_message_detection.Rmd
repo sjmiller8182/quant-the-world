@@ -28,6 +28,8 @@ editor_options:
 ---
 
 ```{r, include=FALSE, echo=FALSE, message=F, warning=F}
+library(pacman)
+p_load(tidyverse, rpart, rpart.plot, tm, naivebayes, e1071, randomForest, caret, MLmetrics)
 library(tidyverse)
 library(rpart)
 library(rpart.plot)
@@ -354,7 +356,7 @@ spamWordCounts[names(trainTable)] = trainTable
 
 # number of occurrences of spam and non-spam for each word in the list.
 spamVnotSpam = function(wordsList, spam, wordsUnique = unique(unlist(wordsList))){
-  # table for spam, non-spam, and log odds
+  # table for spam, non-spam, and log-odds
   wordTable = matrix(0.5, nrow = 4, ncol = length(wordsUnique), dimnames = list(c("spam", "non-spam", "presentLogOdds", "absentLogOdds"),  wordsUnique))
 
   # word count increases by one for each spam message there is
@@ -372,7 +374,7 @@ spamVnotSpam = function(wordsList, spam, wordsUnique = unique(unlist(wordsList))
   wordTable["spam",] = wordTable["spam",]/(spamCnt + .5) # probability of non-spam given spam
   wordTable["non-spam",] = wordTable["non-spam",]/(hamCnt + .5) # probability of spam given non-spam
   
-  # log odds
+  # log-odds
   wordTable["presentLogOdds",] = log(wordTable["spam",]) - log(wordTable["non-spam", ])
   wordTable["absentLogOdds",] = log((1 - wordTable["spam",])) - log((1 -wordTable["non-spam",]))
 
@@ -389,7 +391,32 @@ trainTable[,1:5]
 
 
 ## Results
+### An Analysis of Odds
 
+We used log-odds to assess the fit of a probability-based model, where the probability of a message being spam is equal to the count of
+spam words divided by the count of spam messages plus 0.5 and the probability of a message being not spam is equal to the count of
+non-spam words divided by the count of non-spam emails plus 0.5. This enabled us to gauge how apt the assumptions of the model are, with
+respect to spam and not-spam.
+
+With respect to the following analysis, the null hypothesis states that a given message is not spam:
+
+Based on the distribution of Type I and Type II errors of log likelihood values in fig 1. (line plots) - where Type I error is rejecting
+the null hypothesis when the null hypothesis should not be rejected and Type II error is failing to reject the null when there is
+statistically significant evidence the null should be rejected - the threshold cutoff for determining spam is a log-likelihood value of
+-48. Translating this to a threshold value meaning, a message with a log-likelihood value of greater than -48 is spam and a message with
+a log-likelihood value of less than -48 is not spam.
+
+The distributions of log-likelihoods for each class can be inspected in fig. 2 (box-plots). Based on distribution spread of log
+likelihood ratios for each class, the probability approach appears better at identifying spam than messages that are not spam. This is
+because the spam class has an overall distribution - including the mean - closer to 0 than the non-spam class, which is indicative of a
+better fit. However, there is more repeatability of results within the non-spam class words as the interquartile range is much narrower
+than that of the spam class. This ultimately means words used in non-spam messages are not as unique to non-spam messages as those in
+spam messages. Intuitively, this makes sense because many of the words used in spam messages are often intentional misspellings - such as
+words that substitute "3" in place of "e" so spam filters cannot catch them as easily - that do not commonly appear in non-spam messages.
+Conversely, most words used in non-spam messages also appear in spam messages.
+
+Because of this, in addition to the Naive Bayes approach, we constructed additional models to classify spam vs. not spam, including
+logistic regression and a decision tree classifier.
 
 
 ```{r Classify Test Dataset, echo=F, include=F}
@@ -428,7 +455,7 @@ tapply(testLogLikelihood, testSpam, summary)
 
 ```
 
-```{r, spam_box_plot, echo=F, warning=F, fig.height=3.5}
+```{r, spam_box_plot, echo=F, warning=F, fig.cap="Figure 1: NB Log Likelihood Ratios Distributions", fig.height=3.5}
 
 # generate the box plot
 SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
@@ -442,10 +469,10 @@ data.frame('testLogLikelihood' = testLogLikelihood,
   ylab("Log Likelihood Ratio Distribution") +
   xlab("Message Classification") +
   ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
-  labs(caption = paste(
-      'Figure 1:\n',
-      ' NB', sep='')
-      ) +
+  #labs(caption = paste(
+  #    'Figure 1:\n',
+  #    ' NB', sep='')
+  #    ) +
   theme_minimal() +
    theme(
       plot.title = element_text(hjust = 0.5),
@@ -511,10 +538,33 @@ for (i in 1:k){
 xFoldI = type_1_Error(testFoldOdds, testFoldSpam)
 xFoldII = type_2_Error(testFoldOdds, testFoldSpam)
 tauFoldI = round(min(xFoldI$values[xFoldI$error <= 0.01]))
-tauFoldI
+t2 = max(xFoldII$error[ xFoldII$values < tauFoldI ])
 
-tFold2 = xFoldII$error[ xFoldII$values < tauFoldI ]
-max(tFold2)
+#tFold2 = xFoldII$error[ xFoldII$values < tauFoldI ]
+#max(tFold2)
+```
+
+```{r Error Types, fig.cap="Figure 2: NB Type I and Type II Error", echo=F, warning=F}
+
+library(RColorBrewer)
+cols = brewer.pal(9, "Set1")[c(3, 4, 5)]
+plot(xFoldII$error ~ xFoldII$values,  type = "l", col = cols[1], lwd = 3,
+     xlim = c(-300, 250), ylim = c(0, 1),
+     xlab = "Log Likelihood Ratio Values", ylab="Error Rate", main="Type I & Type II Error Rates:\nSpam vs Non-Spam Log Likelihood Ratios")
+points(xFoldI$error ~ xFoldI$values, type = "l", col = cols[2], lwd = 3)
+legend(x = 50, y = 0.6, fill = c(cols[2], cols[1]),
+       legend = c("Incorrectly Classifying\nNon-Spam as Spam\n", 
+                  "Incorrectly Classifying\nSpam as Non-Spam"), cex = 0.8,
+       bty = "n")
+abline(h=0.01, col ="grey", lwd = 3, lty = 2)
+text(-250, 0.05, pos = 4, "Type I Error = 0.01", col = cols[2])
+
+mtext(tauFoldI, side = 1, line = 0.5, at = tauFoldI, col = cols[3])
+segments(x0 = tauFoldI, y0 = -.50, x1 = tauFoldI, y1 = t2, 
+         lwd = 2, col = "grey")
+text(tauFoldI + 20, 0.05, pos = 4,
+     paste("Type II Error = ", round(t2, digits = 2)), 
+     col = cols[1])
 
 ```
 
@@ -1143,7 +1193,17 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 
 
 
-## Results
+### Model Results
+Using F1 as the baseline metric for error assessment, the Partition Tree outperformed Naive Bayes and Logistic Regression during both
+internal and external cross-validation. On internal 5-fold cross-validation, the Partition Tree scored an F1 of 0.957, while the Naive
+Bayes - outperforming the other probability-based model (Logistic Regression) by 0.042 - scored 0.945.
+
+After applying the models to the external test set, error further diverged between the tree-based and probability-based models. Contrary
+to the internal cross-validation results, Logistic Regression also appears to have generalized better than Naive Bayes, marginally
+outperforming the Bayesian model by 0.012. However, the tree-based Partition Tree model maintained superiority over the probability-based
+models; Logistic Regression scored and F1 of 0.911 and the Partition Tree scored an F1 of 0.957.
+
+Da-dum.
 
 **Table 1. Hyperparameter Tuning Results**
 
@@ -1159,7 +1219,7 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 | Model         | F1 Score    | 
 |---------------|-------------|
 | Naive Bayes         |    0.903     | 
-| Parition Tree       |   0.957      | 
+| Partition Tree       |   0.957      | 
 | Logistic Regression |    0.945     |
 
 
@@ -1168,7 +1228,7 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 | Model         | F1 Score    | 
 |---------------|-------------|
 | Naive Bayes         |    0.899     | 
-| Parition Tree       |   0.953      | 
+| Partition Tree       |   0.953      | 
 | Logistic Regression |    0.911     | 
 
 
