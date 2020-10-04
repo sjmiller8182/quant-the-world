@@ -29,24 +29,20 @@ editor_options:
 
 ```{r, include=FALSE, echo=FALSE, message=F, warning=F}
 library(pacman)
-p_load(tidyverse, rpart, rpart.plot, tm, naivebayes, e1071, randomForest, caret, MLmetrics)
-library(tidyverse)
-library(rpart)
-library(rpart.plot)
-library("tm")
-library(naivebayes)
-library(e1071)
-library(randomForest)
-library(caret)
-library(MLmetrics)
+p_load(tidyverse, rpart, rpart.plot, tm, naivebayes, e1071, randomForest, caret, MLmetrics, RColorBrewer)
 ```
 
 
 # Introduction
 
-Email usage has become so ubiquitous that having an email address is just as common as having a phone number. A brief examination of the benefits of using email reveals why. Email is a cost effective means of mass communication. Free services, such as gmail, make having an email address possible for anyone with an internet connection and a device that can send the message. 
+Email usage has become so ubiquitous that having an email address is just as common as having a phone number. A brief examination of the
+benefits of using email reveals why. Email is a cost effective means of mass communication. Free services, such as gmail, make having an
+email address possible for anyone with an internet connection and a device that can send the message. 
 
-Advertisers gravitate to the use of all accessible and efficient communication methods, and email fits this description well. Some advertisers send messages so frequently, that they irritate address owners, who then seek ways to end the stream of advertisements coming to their email address. Automatic filters that detect unwanted email advertisements, called spam, using machine learning and natural language processing. 
+Advertisers gravitate to the use of all accessible and efficient communication methods, and email fits this description well. Some
+advertisers send messages so frequently, that they irritate address owners, who then seek ways to end the stream of advertisements coming
+to their email address. Automatic filters that detect unwanted email advertisements, called spam, using machine learning and natural
+language processing. 
 
 This case study will demonstrate how to build a spam filter using an email dataset.
 
@@ -87,12 +83,13 @@ Five example engineered features are given below (the full list is provided in a
 
 ### An Analysis of Odds
 
-We used log-odds to assess the fit of a probability-based model, where the probability of a message being spam is equal to the count of
-spam words divided by the count of spam messages plus 0.5 and the probability of a message being not spam is equal to the count of
-non-spam words divided by the count of non-spam emails plus 0.5. This enabled us to gauge how apt the assumptions of the model are, with
-respect to spam and not-spam.
+We used log-odds to assess the fit of a probability-based model, where the probability of a message being spam is equal to
+the count of spam words divided by the count of spam messages plus 0.5 and the probability of a message being not spam is
+equal to the count of non-spam words divided by the count of non-spam emails plus 0.5. This enabled us to gauge how apt the
+assumptions of the model are, with respect to spam and not-spam.
 
-Using all training data for each class across all email data types, we gathered raw probability estimations and their mean log-odds per data type.
+Using all training data for each class across all email data types, we gathered raw probability estimations and their mean 
+log-odds per data type.
 
 | `Class`               | `doctype`      | `html`       | `public`      | `dtd`              | `transitional` | 
 |-----------------------|--------------|------------|-------------|------------------|--------------|
@@ -103,52 +100,15 @@ Using all training data for each class across all email data types, we gathered 
 
 With respect to the following analysis, the null hypothesis states that a given message is not spam:
 
-Based on the distribution of Type I and Type II errors of log likelihood values in *Fig. 2* - where Type I error is rejecting
+Based on the distribution of Type I and Type II errors of log likelihood values in *Fig. 1* - where Type I error is rejecting
 the null hypothesis when the null hypothesis should not be rejected and Type II error is failing to reject the null when there is
-statistically significant evidence the null should be rejected - the threshold cutoff for determining spam is a log-likelihood value of
--48. Translating this to a threshold value meaning, a message with a log-likelihood value of greater than -48 is spam and a message with
-a log-likelihood value of less than -48 is not spam.
+statistically significant evidence the null should be rejected - the threshold cutoff for determining spam is a log-likelihood
+value of -48. Translating this to a threshold value meaning, a message with a log-likelihood value of greater than -48 is spam 
+and a message with a log-likelihood value of less than -48 is not spam.
 
-The distributions of log-likelihoods for each class can be inspected in *Fig. 1*. Based on distribution spread of log
-likelihood ratios for each class, the probability approach appears better at identifying spam than messages that are not spam. This is
-because the spam class has an overall distribution - including the mean - closer to 0 than the non-spam class, which is indicative of a
-better fit. However, there is more repeatability of results within the non-spam class words as the interquartile range is much narrower
-than that of the spam class. This ultimately means words used in non-spam messages are not as unique to non-spam messages as those in
-spam messages. Intuitively, this makes sense because many of the words used in spam messages are often intentional misspellings - such as
-words that substitute "3" in place of "e" so spam filters cannot catch them as easily - that do not commonly appear in non-spam messages.
-Conversely, most words used in non-spam messages also appear in spam messages.
-
-Because of this, in addition to the Naive Bayes approach, we constructed additional models to classify spam vs. not spam, including
-logistic regression and a decision tree classifier.
-
-## Modeling
-
-We experimented with three modeling techniques on this dataset: logistic regression, naive bayes, and parition trees.
-Logistic regression was primary employed as a baseline model.
-Since naive bayes and parition trees can describe non-linear decision boundries,
- these models could provide better performance than logistic regression.
-
-Since hyperparameters must be selected for naive bayes and parition trees, 
- we split the data into two sets by random sampling: 70% for training and 30% for test.
-Each model was fit with 3-fold cross-validation on the training data to select the hyperparameters 
- where F1-score was used as the selection criterion.
-The hyperparameters selected for each model are shown in table 1 
- and the F1-scores from cross-validation are shown in table 2.
-After selecting hyperparameters, we compared the performance of each model on the test set (shown in table 3).
-
-### Hyperparameters
-
-We used normal logistic regression, thus there were no hyperparameters to tune.
-
-For naive bayes, we tuned the following parameters:
-
-* `laplace` - laplace smoothing
-* `usekernel` - if `TRUE` use a kernel density estimate, else use gaussian density estimate
-* `adjust` - if `TRUE` allow the bandwidth of kernel density estimate to be adjusted (more flexiable), else do not allow adjustments
-
-For partition trees, we tuned the following parameters:
-
-* `cp` - minimum decrease in lack of fit for a new split 
+Below, the Type I Error (rejecting the null hypothesis when the null hypothesis should not be rejected) level
+of significance is 0.01 and the Type II Error (failing to reject the null hypothesis where the null hypothesis
+is true) is 0.05.
 
 
 ```{r, read_data, include=FALSE}
@@ -470,30 +430,6 @@ testLogLikelihood = sapply(testMessageWords, getLogLikelihood, trainTable)
 tapply(testLogLikelihood, testSpam, summary)
 ```
 
-```{r, spamBoxPlot, echo=F, warning=F, fig.cap="Naive Bayes Log Likelihood Distributions", fig.height=3.5}
-# generate the box plot
-SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
-#boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly #Selected Messages\n by  Classification", ylim=c(-500, 500))
-data.frame('testLogLikelihood' = testLogLikelihood,
-           'SPAM_CLASS' = SPAM_CLASS) %>%
-  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
-  geom_boxplot() +
-  ylim(-500,500) +
-  ylab("Log Likelihood Ratio Distribution") +
-  xlab("Message Classification") +
-  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
-  #labs(caption = paste(
-  #    'Figure 1:\n',
-  #    ' NB', sep='')
-  #    ) +
-  theme_minimal() +
-   theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0)
-  )
-```
-
-
 ```{r, NB_misclassification, echo=F, include=F}
 # misclassification rate and using reference value tau
 type_1_Error = function(tau, logLikelihoodVals, spam){
@@ -546,8 +482,8 @@ t2 = max(xFoldII$error[ xFoldII$values < tauFoldI ])
 #max(tFold2)
 ```
 
-Below, the Type I Error (rejecting the null hypothesis when the null hypothesis should not be rejected) level of significance is 0.01 and the Type II Error (failing to reject the null hypothesis where the null hypothesis is true) is 0.05.
-```{r ErrorTypes, fig.cap="NB Type I and Type II Error", echo=F, warning=F, fig.align='center', fig.pos="htbp"}
+
+```{r ErrorTypes, fig.cap="NB Type I and Type II Error", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
 library(RColorBrewer)
 cols = brewer.pal(9, "Set1")[c(3, 4, 5)]
 plot(xFoldII$error ~ xFoldII$values,  type = "l", col = cols[1], lwd = 3,
@@ -567,8 +503,73 @@ text(tauFoldI + 20, 0.05, pos = 4,
      paste("Type II Error = ", round(t2, digits = 2)), 
      col = cols[1])
 ```
+\pagebreak
 
+The distributions of log-likelihoods for each class can be inspected in **Fig. 2**. Based on distribution spread of log
+likelihood ratios for each class, the probability approach appears better at identifying spam than messages that are not spam. This is
+because the spam class has an overall distribution - including the mean - closer to 0 than the non-spam class, which is indicative of a
+better fit. However, there is more repeatability of results within the non-spam class words as the interquartile range is much narrower
+than that of the spam class. This ultimately means words used in non-spam messages are not as unique to non-spam messages as those in
+spam messages. Intuitively, this makes sense because many of the words used in spam messages are often intentional misspellings - such as
+words that substitute "3" in place of "e" so spam filters cannot catch them as easily - that do not commonly appear in non-spam messages.
+Conversely, most words used in non-spam messages also appear in spam messages.
 
+Because of this, in addition to the Naive Bayes approach, we constructed additional models to classify spam vs. not spam, including
+logistic regression and a decision tree classifier.
+```{r, spamBoxPlot, echo=F, warning=F, fig.cap="Naive Bayes Log Likelihood Distributions", fig.align='center', out.width = "75%", out.height = "75%"}
+# generate the box plot
+SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
+#boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly #Selected Messages\n by  Classification", ylim=c(-500, 500))
+data.frame('testLogLikelihood' = testLogLikelihood,
+           'SPAM_CLASS' = SPAM_CLASS) %>%
+  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
+  geom_boxplot() +
+  ylim(-500,500) +
+  ylab("Log Likelihood Ratio Distribution") +
+  xlab("Message Classification") +
+  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
+  #labs(caption = paste(
+  #    'Figure 1:\n',
+  #    ' NB', sep='')
+  #    ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+```
+\pagebreak
+
+## Modeling
+
+We experimented with three modeling techniques on this dataset: logistic regression, naive bayes, and parition trees.
+Logistic regression was primary employed as a baseline model.
+Since naive bayes and parition trees can describe non-linear decision boundries,
+ these models could provide better performance than logistic regression.
+
+Since hyperparameters must be selected for naive bayes and parition trees, 
+ we the data into two sets by random sampling: 70% for training and 30% for test.
+Each model was fit with 3-fold cross-validation on the training data to select the hyperparameters 
+ where F1-score was used as the selection criterion.
+The hyperparameters selected for each model are shown in table 1 
+ and the F1-scores from cross-validation are shown in table 2.
+After selecting hyperparameters, we compared the performance of each model on the test set (shown in table 3).
+
+### Hyperparameters
+
+We used normal logistic regression, thus there were no hyperparameters to tune.
+
+For naive bayes, we tuned the following parameters:
+
+* `laplace` - laplace smoothing
+* `usekernel` - if `TRUE` use a kernel density estimate, else use gaussian density estimate
+* `adjust` - if `TRUE` allow the bandwidth of kernel density estimate to be adjusted (more flexiable), else do not allow adjustments
+
+\pagebreak
+
+For partition trees, we tuned the following parameters:
+
+* `cp` - minimum decrease in lack of fit for a new split
 
 ```{r, data prep, echo=F, message=F, warning=F}
 funcList = list(
@@ -1137,13 +1138,13 @@ model_glm <- caret::train(as.factor(isSpam) ~ .,
 ```
 
 ```{r confusionMatrixFunction, echo=F, message=F, warning=F}
+# Creating a function to build the confusion matrix visuals
 draw_confusion_matrix <- function(cm, type) {
 
   layout(matrix(c(1,1,2)))
   par(mar=c(2,2,2,2))
   plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
-  #title('CONFUSION MATRIX', cex.main=2)
-  title(paste0(type," Confusion Matrix", sep=''), cex.main=2)
+    title(paste0(type," Confusion Matrix", sep=''), cex.main=2)
 
   # create the matrix 
   rect(150, 430, 240, 370, col='#66ff66')
@@ -1192,9 +1193,6 @@ draw_confusion_matrix <- function(cm, type) {
 model_nb_y_hat <- predict(model_nb, newdata = select(testDF, -isSpam))
 model_rpart_y_hat <- predict(model_rpart, newdata = select(testDF, -isSpam))
 model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
-#F1_Score(model_nb_y_hat, testDF$isSpam, positive = 0)
-#F1_Score(model_rpart_y_hat, testDF$isSpam, positive = 0)
-#F1_Score(model_glm_y_hat, testDF$isSpam, positive = 0)
 
 ```
 
@@ -1224,6 +1222,7 @@ The partition tree was tuned by a using a complexity parameter range from 0 to 0
 | Naive Bayes   |    adjust      | `True`  |
 | Partition Tree |   cp          | 0.0015  |
 
+\pagebreak
 
 During k-fold cross-validation, Partition Trees were are better for this data set and task than Naive Bayes 
 and Logistic Regression, by F1 score.
@@ -1237,6 +1236,7 @@ and Logistic Regression, by F1 score.
 | Logistic Regression |    0.945     |
 
 
+
 When applied to our test set, Partition Trees continued to perform better than both Naive Bayes and Logistic Regression.
 
 **Table 3. Test Results**
@@ -1248,32 +1248,24 @@ When applied to our test set, Partition Trees continued to perform better than b
 | Logistic Regression |    0.911     | 
 
 
-Naive Bayes model application resulted in the following results:
+The following results were the comprehensive, summary-level results of our three models:
 ```{r nbConfusion, fig.cap="Naive Bayes Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
+# Printing the confusion matrix for Naive Bayes using the test data set
 cfm_nb <- confusionMatrix(as.factor(model_nb_y_hat), as.factor(testDF$isSpam))
 draw_confusion_matrix(cfm_nb, type="Naive Bayes")
 ```
 
-Logistic Regression model application resulted in the following results:
 ```{r glmConfusion, fig.cap="Logistic Regression Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
+# Printing the confusion matrix for Logistic Regression Generalized Linear Model using the test data set
 cfm_logistic <- confusionMatrix(as.factor(model_glm_y_hat), as.factor(testDF$isSpam))
 draw_confusion_matrix(cfm_logistic, type="Logistic Regression")
 ```
 
-Partition Tree model application resulted in the following results:
 ```{r partTreeConfusion, fig.cap="Partition Tree Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
+# Printing the confusion matrix for the Partition Tree using the test data set
 cfm_rpart <- confusionMatrix(as.factor(model_rpart_y_hat), as.factor(testDF$isSpam))
 draw_confusion_matrix(cfm_rpart, type="Partition Tree")
 ```
-
-
-
-
-
-
-
-
-
 
 \newpage
 # Conclusion
@@ -1281,6 +1273,7 @@ draw_confusion_matrix(cfm_rpart, type="Partition Tree")
 The creation of spam filtration tools is highly dependent on a combination of text preprocessing methodologies and the selection of an approriate classifier. In this study, a baseline logistic regression model was compared to the classifications of a partion tree and a naive bayes model. The models were compared using a balanced F1 score and the partition tree model outperformed both the baseline and the naive bayes model with a score of .953. This suggests that decsion tree models could be better suited to a spam detection task.
 
 The findings of this study may not generalize well due to the constant evolution of advertising lingo and the adaptations that advertisers make to circumvent spam filters. The data are approaching obsolesance so both the text preprocessing scheme and the engineered features may not hold value. This study recommends using an updated dataset and a new feature set that more aptly reflect the nature and content of modern email systems.
+
 
 \newpage
 
@@ -1360,49 +1353,54 @@ The following words (commonly found in spam emails) were considered spam words f
 
 ```
 library(pacman)
-p_load(tidyverse, rpart, rpart.plot, tm, naivebayes, e1071, randomForest, caret, MLmetrics)
-library(tidyverse)
-library(rpart)
-library(rpart.plot)
-library("tm")
-library(naivebayes)
-library(e1071)
-library(randomForest)
-library(caret)
-library(MLmetrics)
+p_load(tidyverse, rpart, rpart.plot, tm, naivebayes, e1071, randomForest, caret, MLmetrics
+, RColorBrewer)
+
 # video 1
 # list the data diectories
 list.dirs('./data/', full.names = F)
+
 # get the number of data directories
 length(list.files(paste('./data/', sep=.Platform$file.sep)))
+
 # get all the data directory names
 dir.names <- list.files(paste('./data', sep=.Platform$file.sep))
+
 # list the number of files in each data directory
 sapply(paste('./data', dir.names, sep = .Platform$file.sep), 
        function(dir) length(list.files(dir)))
+
 # get the full data dir names
 filldirNames <- paste('./data', dir.names, sep = .Platform$file.sep)
+
 # list full dir names of data files; print sample
 fileNames <- list.files(filldirNames[1], full.names = T)
 fileNames[1]
+
 # get some example enail files from the first dir
 messageIdx <- c(1:5, 15, 27, 68, 69, 329, 404, 427, 516, 852, 971)
 fn = list.files(filldirNames[1], full.names = T)[messageIdx]
 sampleEmail <- sapply(fn, readLines)
 sampleEmail
+
 # video 2
 # get a sample email to work with
 msg <- sampleEmail[[1]]
+
 # get the blank line as a split point
 which(msg == '')[1]
 match('', msg)
+
 # save the split point for example message
 splitPoint <- match('', msg)
+
 # view area around split point
 msg[ (splitPoint - 2) : (splitPoint + 6) ]
+
 # get the header and body of teh example message
 header <- msg[1 : (splitPoint - 1)]
 body <- msg[ -( 1:(splitPoint - 1) ) ]
+
 # create a function to split messages on the first empty line
 # header is the first element and body is the second element
 # of the split
@@ -1412,11 +1410,14 @@ splitMessage <- function(msg){
   body <- msg[ -( 1:(splitPoint - 1) ) ]
   return(list(header = header, body = body))
 }
+
 # apply function to the sample messages
 sampleSplit <- lapply(sampleEmail, splitMessage)
 length(sampleSplit)
+
 # pring the sample header
 sampleSplit[[6]]$header
+
 # video 3
 # get some files and split them as before
 messageIdx <- c(1:5, 15, 27, 68, 69, 329, 404, 427, 516, 852, 971,
@@ -1427,16 +1428,19 @@ sampleEmail <- sapply(fn, readLines)
 sampleSplit <- lapply(sampleEmail, splitMessage)
 header <- sampleSplit[[1]]$header
 grep("Content-Type", header)
+
 # find locations of "Contenct-Type" (where the attachment is)
 headerList <- lapply(sampleSplit, function(msg) msg$header)
 CTloc <- sapply(headerList, grep, pattern = "Content-Type")
 CTloc
+
 # improvement where NA is returned for 0 (no occurance)
 sapply(headerList, function(header){
   CTloc <- grep("Content-Type", header)
   if (length(CTloc) == 0) return (NA)
   CTloc
 })
+
 # find locations of attachements
 hasAttach <- sapply(headerList, function(header){
   CTloc <- grep("Content-Type", header)
@@ -1447,30 +1451,37 @@ header <- sampleSplit[[12]]$header
 boundaryIdx <- grep('boundary=', header)
 header[boundaryIdx]
 sub(".*boundary=\"? *(.*)\"?;?.*", "\\1", header[boundaryIdx])
+
 # a function to find boundaries
 getBoundary <- function(header){
   boundaryIdx <- grep('boundary=', header)
   boundary = gsub('"', "", header[boundaryIdx])
   gsub(".*boundary= *([^;]*);?.*", "\\1", boundary)
 }
+
 # sample message with a PGP signature
 sampleSplit[[12]]$body
+
 # search for boundary of msg 15
 boundary = getBoundary(headerList[[15]]) 
 body = sampleSplit[[15]]$body
+
 # locating beginning string
 bString = paste("--", boundary, sep = "")
 bStringLocs = which(bString == body)
 bStringLocs
+
 # locating ending string
 eString = paste("--", boundary, "--", sep = "")
 eStringLoc = which(eString == body)
 eStringLoc
+
 # separating the body of the message
 msg = body[ (bStringLocs[1] + 1) : (bStringLocs[2] - 1)]
 tail(msg)
 msg = c(msg, body[ (eStringLoc + 1) : length(body) ])
 tail(msg)
+
 # function that drops attachments
 dropAttach = function(body, boundary){
   
@@ -1481,17 +1492,21 @@ dropAttach = function(body, boundary){
   
   eString = paste("--", boundary, "--", sep = "")
   eStringLoc = which(eString == body)
+  
   if (length(eStringLoc) == 0) 
     return(body[ (bStringLocs[1] + 1) : (bStringLocs[2] - 1)])
   
   n = length(body)
+  
   if (eStringLoc < n) 
      return( body[ c( (bStringLocs[1] + 1) : (bStringLocs[2] - 1), 
                     ( (eStringLoc + 1) : n )) ] )
   
   return( body[ (bStringLocs[1] + 1) : (bStringLocs[2] - 1) ])
 }
+
 head(sampleSplit[[1]]$body)
+
 # load stopwords function
 stopWords = stopwords()
 # applying same text pre-processing to stopwords as emails
@@ -1499,24 +1514,29 @@ cleanSW = tolower(gsub("[[:punct:]0-9[:blank:]]+", " ", stopWords))
 SWords = unlist(strsplit(cleanSW, "[[:blank:]]+"))
 SWords = SWords[ nchar(SWords) > 1 ]
 stopWords = unique(SWords)
+
 words = SWords[ !( SWords %in% stopWords) ]
 words[0:15]
+
 # Function to remove numbers, punctuation, and other undesirables
 cleanText = function(msg){
   tolower(gsub("[[:punct:]0-9[:space:][:blank:]]+", " ", msg))
 }
+
 # function that extracts words from message body
 findMsgWords = 
   function(msg, stopWords){
  if(is.null(msg))
   return(character())
+    
  words = unique(unlist(strsplit(cleanText(msg), "[[:blank:]\t]+")))
  
  # drop stopwords
  words = words[ nchar(words) > 1]
  words = words[ !( words %in% stopWords) ]
  invisible(words)
-}
+  }
+
 # Given directory and stop words, this extracts all email verbiage
 processAllWords = function(dirName, stopWords){
   # List all files in the directory
@@ -1563,6 +1583,7 @@ numbaMessages = sapply(messageWordsList, length)
 isSpam = rep(c(FALSE, FALSE, FALSE, TRUE, TRUE), numbaMessages) # Identify the false messages
 # All valid words from all the emails
 messageWordsList = unlist(messageWordsList, recursive = FALSE) 
+
 emailCnt = length(isSpam)
 spamCnt = sum(isSpam)
 legitCnt = emailCnt - spamCnt
@@ -1572,12 +1593,15 @@ set.seed(43)
 testSpamIdx = sample(spamCnt, size = floor(spamCnt*0.25))
 testLegitIdx = sample(legitCnt, size = floor(legitCnt*0.25))
 # split out into test and train data
-testMessageWords = c((messageWordsList[isSpam])[testSpamIdx],(messageWordsList[!isSpam])[testLegitIdx] )
-trainMessageWords = c((messageWordsList[isSpam])[ - testSpamIdx],(messageWordsList[!isSpam])[ - testLegitIdx])
+testMessageWords = c((messageWordsList[isSpam])[testSpamIdx]
+,(messageWordsList[!isSpam])[testLegitIdx] )
+trainMessageWords = c((messageWordsList[isSpam])[ - testSpamIdx]
+,(messageWordsList[!isSpam])[ - testLegitIdx])
 testSpam = rep(c(TRUE, FALSE), c(length(testSpamIdx), length(testLegitIdx)))
 unique(testSpam)
 trainSpam = rep(c(TRUE, FALSE), c(spamCnt - length(testSpamIdx), legitCnt - length(testLegitIdx)))
 unique(trainSpam)
+
 # number of unique words in training data
 wordsUnique = unique(unlist(trainMessageWords))
 length(wordsUnique)
@@ -1590,7 +1614,8 @@ spamWordCounts[names(trainTable)] = trainTable
 # number of occurrences of spam and non-spam for each word in the list.
 spamVnotSpam = function(wordsList, spam, wordsUnique = unique(unlist(wordsList))){
   # table for spam, non-spam, and log-odds
-  wordTable = matrix(0.5, nrow = 4, ncol = length(wordsUnique), dimnames = list(c("spam", "non-spam", "presentLogOdds", "absentLogOdds"),  wordsUnique))
+  wordTable = matrix(0.5, nrow = 4, ncol = length(wordsUnique), dimnames = list(c("spam"
+  , "non-spam", "presentLogOdds", "absentLogOdds"),  wordsUnique))
   # word count increases by one for each spam message there is
   spamWordCnt = table(unlist(lapply(wordsList[spam], unique)))
   wordTable["spam", names(spamWordCnt)] = spamWordCnt + 1
@@ -1611,6 +1636,7 @@ spamVnotSpam = function(wordsList, spam, wordsUnique = unique(unlist(wordsList))
 ### Apply spamVnotSpam function to training data
 trainTable = spamVnotSpam(trainMessageWords, trainSpam)
 trainTable[,1:5]
+
 # There may be words not in training data. This calculates log odds without new words.
 # The first message is spam, and the log likelihood is positive.
 newMessage = testMessageWords[[1]]
@@ -1633,25 +1659,7 @@ getLogLikelihood = function(words, freqTable){
 # box plots of log likelihoods
 testLogLikelihood = sapply(testMessageWords, getLogLikelihood, trainTable)
 tapply(testLogLikelihood, testSpam, summary)
-# generate the box plot
-SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
-data.frame('testLogLikelihood' = testLogLikelihood,
-           'SPAM_CLASS' = SPAM_CLASS) %>%
-  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
-  geom_boxplot() +
-  ylim(-500,500) +
-  ylab("Log Likelihood Ratio Distribution") +
-  xlab("Message Classification") +
-  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
-  #labs(caption = paste(
-  #    'Figure 1:\n',
-  #    ' NB', sep='')
-  #    ) +
-  theme_minimal() +
-   theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0)
-  )
+
 # misclassification rate and using reference value tau
 type_1_Error = function(tau, logLikelihoodVals, spam){
   classify = logLikelihoodVals > tau
@@ -1688,7 +1696,8 @@ testFoldOdds = NULL
 for (i in 1:k){
   foldIdx = partK[,i]
   trainTabFold = spamVnotSpam(trainMessageWords[-foldIdx], trainSpam[-foldIdx])
-  testFoldOdds = c(testFoldOdds, sapply(trainMessageWords[foldIdx], getLogLikelihood, trainTabFold))
+  testFoldOdds = c(testFoldOdds, sapply(trainMessageWords[foldIdx], getLogLikelihood
+  , trainTabFold))
 }
 testFoldSpam = NULL
 for (i in 1:k){
@@ -1701,12 +1710,12 @@ tauFoldI = round(min(xFoldI$values[xFoldI$error <= 0.01]))
 t2 = max(xFoldII$error[ xFoldII$values < tauFoldI ])
 #tFold2 = xFoldII$error[ xFoldII$values < tauFoldI ]
 #max(tFold2)
-library(RColorBrewer)
+
 cols = brewer.pal(9, "Set1")[c(3, 4, 5)]
 plot(xFoldII$error ~ xFoldII$values,  type = "l", col = cols[1], lwd = 3,
      xlim = c(-300, 250), ylim = c(0, 1),
-     xlab = "Log Likelihood Ratio Values",
-     ylab="Error Rate", main="Type I & Type II Error Rates:\nSpam vs Non-Spam Log Likelihood Ratios")
+     xlab = "Log Likelihood Ratio Values", ylab="Error Rate", main="Type I & Type II 
+     Error Rates:\nSpam vs Non-Spam Log Likelihood Ratios")
 points(xFoldI$error ~ xFoldI$values, type = "l", col = cols[2], lwd = 3)
 legend(x = 50, y = 0.6, fill = c(cols[2], cols[1]),
        legend = c("Incorrectly Classifying\nNon-Spam as Spam\n", 
@@ -1720,6 +1729,29 @@ segments(x0 = tauFoldI, y0 = -.50, x1 = tauFoldI, y1 = t2,
 text(tauFoldI + 20, 0.05, pos = 4,
      paste("Type II Error = ", round(t2, digits = 2)), 
      col = cols[1])
+
+# generate the box plot
+SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
+#boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = 
+"Distribution of Randomly #Selected Messages\n by  Classification", ylim=c(-500, 500))
+data.frame('testLogLikelihood' = testLogLikelihood,
+           'SPAM_CLASS' = SPAM_CLASS) %>%
+  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
+  geom_boxplot() +
+  ylim(-500,500) +
+  ylab("Log Likelihood Ratio Distribution") +
+  xlab("Message Classification") +
+  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
+  #labs(caption = paste(
+  #    'Figure 1:\n',
+  #    ' NB', sep='')
+  #    ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+
 funcList = list(
   isSpam =
     expression(msg$isSpam)
@@ -2188,6 +2220,7 @@ trainDF =
   rbind( emailDFrp[emailDFrp$isSpam == "T", ][-testSpamIdx, ], 
          emailDFrp[emailDFrp$isSpam == "F", ][-testHamIdx, ])
 rpartFit = rpart(isSpam ~ ., data = trainDF, method = "class")
+
 predictions = predict(rpartFit, 
        newdata = testDF[, names(testDF) != "isSpam"],
        type = "class")
@@ -2197,6 +2230,7 @@ predsForHam = predictions[ testDF$isSpam == "F" ]
 #sum(predsForHam == "T") / length(predsForHam)
 predsForSpam = predictions[ testDF$isSpam == "T" ]
 #sum(predsForSpam == "F") / length(predsForSpam)
+
 # create a function to calculate the F1 summary metrics
 f1 <- function(data, lev = NULL, model = NULL) {
   f1_val <- F1_Score(y_pred = data$pred, y_true = data$obs, positive = lev[1])
@@ -2212,6 +2246,7 @@ f1 <- function(data, lev = NULL, model = NULL) {
     Type_II_err=fn
    )
 }
+
 # split the dataset into training and test
 testDF = 
   rbind( emailDF[ emailDF$isSpam == TRUE, ][testSpamIdx, ],
@@ -2231,6 +2266,7 @@ testDF = setupRnum(testDF)
 testDF[is.na(testDF)]<-0
 trainDF = setupRnum(trainDF)
 trainDF[is.na(trainDF)]<-0
+
 # naive bayes model
 nb_grid<-expand.grid(laplace=c(0,0.1,0.3,0.5,1),
                      usekernel=c(T,F),
@@ -2265,12 +2301,70 @@ model_glm <- caret::train(as.factor(isSpam) ~ .,
                        data=trainDF,
                        trControl = train_control, 
                        method='glm', 
-                       family="binomial")
+
+# Creating a function to build the confusion matrix visuals
+draw_confusion_matrix <- function(cm, type) {
+
+  layout(matrix(c(1,1,2)))
+  par(mar=c(2,2,2,2))
+  plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
+    title(paste0(type," Confusion Matrix", sep=''), cex.main=2)
+
+  # create the matrix 
+  rect(150, 430, 240, 370, col='#66ff66')
+  text(195, 435, 'Not Spam', cex=1.2)
+  rect(250, 430, 340, 370, col='#ff0000')
+  text(295, 435, 'Spam', cex=1.2)
+  text(125, 370, 'Predicted', cex=1.3, srt=90, font=2)
+  text(245, 450, 'Actual', cex=1.3, font=2)
+  rect(150, 305, 240, 365, col='#ff0000')
+  rect(250, 305, 340, 365, col='#66ff66')
+  text(140, 400, 'Not Spam', cex=1.2, srt=90)
+  text(140, 335, 'Spam', cex=1.2, srt=90)
+
+  # add in the cm results 
+  res <- as.numeric(cm$table)
+  text(195, 400, res[1], cex=1.6, font=2, col='white')
+  text(195, 335, res[2], cex=1.6, font=2, col='white')
+  text(295, 400, res[3], cex=1.6, font=2, col='white')
+  text(295, 335, res[4], cex=1.6, font=2, col='white')
+
+  # add in the specifics 
+  plot(c(100, 0), c(100, 0), type = "n", xlab="", ylab="", main = "DETAILS", xaxt='n', yaxt='n')
+  text(10, 85, names(cm$byClass[1]), cex=1.2, font=2)
+  text(10, 70, round(as.numeric(cm$byClass[1]), 3), cex=1.2)
+  text(30, 85, names(cm$byClass[2]), cex=1.2, font=2)
+  text(30, 70, round(as.numeric(cm$byClass[2]), 3), cex=1.2)
+  text(50, 85, names(cm$byClass[5]), cex=1.2, font=2)
+  text(50, 70, round(as.numeric(cm$byClass[5]), 3), cex=1.2)
+  text(70, 85, names(cm$byClass[6]), cex=1.2, font=2)
+  text(70, 70, round(as.numeric(cm$byClass[6]), 3), cex=1.2)
+  text(90, 85, names(cm$byClass[7]), cex=1.2, font=2)
+  text(90, 70, round(as.numeric(cm$byClass[7]), 3), cex=1.2)
+
+  # add in the accuracy information 
+  text(30, 35, names(cm$overall[1]), cex=1.5, font=2)
+  text(30, 20, round(as.numeric(cm$overall[1]), 3), cex=1.4)
+  text(70, 35, names(cm$overall[2]), cex=1.5, font=2)
+  text(70, 20, round(as.numeric(cm$overall[2]), 3), cex=1.4)
+}  
+
 # get the results on the test set
 model_nb_y_hat <- predict(model_nb, newdata = select(testDF, -isSpam))
 model_rpart_y_hat <- predict(model_rpart, newdata = select(testDF, -isSpam))
 model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
-#F1_Score(model_nb_y_hat, testDF$isSpam, positive = 0)
-#F1_Score(model_rpart_y_hat, testDF$isSpam, positive = 0)
-#F1_Score(model_glm_y_hat, testDF$isSpam, positive = 0)
+
+# Printing the confusion matrix for Naive Bayes using the test data set
+cfm_nb <- confusionMatrix(as.factor(model_nb_y_hat), as.factor(testDF$isSpam))
+draw_confusion_matrix(cfm_nb, type="Naive Bayes")
+
+# Printing the confusion matrix for Logistic Regression Generalized Linear Model using the test 
+data set
+cfm_logistic <- confusionMatrix(as.factor(model_glm_y_hat), as.factor(testDF$isSpam))
+draw_confusion_matrix(cfm_logistic, type="Logistic Regression")
+
+
+# Printing the confusion matrix for the Partition Tree using the test data set
+cfm_rpart <- confusionMatrix(as.factor(model_rpart_y_hat), as.factor(testDF$isSpam))
+draw_confusion_matrix(cfm_rpart, type="Partition Tree")
 ```
