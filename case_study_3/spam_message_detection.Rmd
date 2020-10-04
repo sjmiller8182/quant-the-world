@@ -1131,6 +1131,56 @@ model_glm <- caret::train(as.factor(isSpam) ~ .,
                        family="binomial")
 ```
 
+```{r confusionMatrixFunction, echo=F, message=F, warning=F}
+draw_confusion_matrix <- function(cm, type) {
+
+  layout(matrix(c(1,1,2)))
+  par(mar=c(2,2,2,2))
+  plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
+  #title('CONFUSION MATRIX', cex.main=2)
+  title(paste0(type," Confusion Matrix", sep=''), cex.main=2)
+
+  # create the matrix 
+  rect(150, 430, 240, 370, col='#66ff66')
+  text(195, 435, 'Not Spam', cex=1.2)
+  rect(250, 430, 340, 370, col='#ff0000')
+  text(295, 435, 'Spam', cex=1.2)
+  text(125, 370, 'Predicted', cex=1.3, srt=90, font=2)
+  text(245, 450, 'Actual', cex=1.3, font=2)
+  rect(150, 305, 240, 365, col='#ff0000')
+  rect(250, 305, 340, 365, col='#66ff66')
+  text(140, 400, 'Not Spam', cex=1.2, srt=90)
+  text(140, 335, 'Spam', cex=1.2, srt=90)
+
+  # add in the cm results 
+  res <- as.numeric(cm$table)
+  text(195, 400, res[1], cex=1.6, font=2, col='white')
+  text(195, 335, res[2], cex=1.6, font=2, col='white')
+  text(295, 400, res[3], cex=1.6, font=2, col='white')
+  text(295, 335, res[4], cex=1.6, font=2, col='white')
+
+  # add in the specifics 
+  plot(c(100, 0), c(100, 0), type = "n", xlab="", ylab="", main = "DETAILS", xaxt='n', yaxt='n')
+  text(10, 85, names(cm$byClass[1]), cex=1.2, font=2)
+  text(10, 70, round(as.numeric(cm$byClass[1]), 3), cex=1.2)
+  text(30, 85, names(cm$byClass[2]), cex=1.2, font=2)
+  text(30, 70, round(as.numeric(cm$byClass[2]), 3), cex=1.2)
+  text(50, 85, names(cm$byClass[5]), cex=1.2, font=2)
+  text(50, 70, round(as.numeric(cm$byClass[5]), 3), cex=1.2)
+  text(70, 85, names(cm$byClass[6]), cex=1.2, font=2)
+  text(70, 70, round(as.numeric(cm$byClass[6]), 3), cex=1.2)
+  text(90, 85, names(cm$byClass[7]), cex=1.2, font=2)
+  text(90, 70, round(as.numeric(cm$byClass[7]), 3), cex=1.2)
+
+  # add in the accuracy information 
+  text(30, 35, names(cm$overall[1]), cex=1.5, font=2)
+  text(30, 20, round(as.numeric(cm$overall[1]), 3), cex=1.4)
+  text(70, 35, names(cm$overall[2]), cex=1.5, font=2)
+  text(70, 20, round(as.numeric(cm$overall[2]), 3), cex=1.4)
+}  
+```
+
+
 
 ```{r, test_models, echo=F, message=F, warning=F}
 # get the results on the test set
@@ -1140,6 +1190,7 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 #F1_Score(model_nb_y_hat, testDF$isSpam, positive = 0)
 #F1_Score(model_rpart_y_hat, testDF$isSpam, positive = 0)
 #F1_Score(model_glm_y_hat, testDF$isSpam, positive = 0)
+
 ```
 
 
@@ -1147,13 +1198,17 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 
 ### Model Results
 Using F1 as the baseline metric for error assessment, the Partition Tree outperformed Naive Bayes and Logistic Regression during both
-internal and external cross-validation. On internal 5-fold cross-validation, the Partition Tree scored an F1 of 0.957, while the Naive
+internal and external cross-validation. On internal 3-fold cross-validation, the Partition Tree scored an F1 of 0.957, while the Naive
 Bayes - outperforming the other probability-based model (Logistic Regression) by 0.042 - scored 0.945.
 
 After applying the models to the external test set, error further diverged between the tree-based and probability-based models. Contrary
 to the internal cross-validation results, Logistic Regression also appears to have generalized better than Naive Bayes, marginally
 outperforming the Bayesian model by 0.012. However, the tree-based Partition Tree model maintained superiority over the probability-based
 models; Logistic Regression scored and F1 of 0.911 and the Partition Tree scored an F1 of 0.957.
+
+Multiple hyperparamter configurations were applied during modeling. The Naive Bayes model used a Laplace Correction grid search for values of 0, 0.1, 0.3, 0.5, and 1 to shift probability from zero when there are words that have not been encountered during training. This was applied in combination with adjusted an non-adjusted kernel bandwidth denstiy values. The values we used were 0 for Laplace Smoothing - potentially because the words not trained on were either insignificant or they did not exist - using a bandwidth-adjusted kernel density estimation. Internal cross-validation was performed on three folds, with tuning towards the balanced F1 score.
+
+The partition tree was tuned by a using a complexity parameter range from 0 to 0.01 at intervals of 0.0005. The selected complexity paramter was 0.0015. The precision/recall tuning was balanced with focus on the F1 score.
 
 **Table 1. Hyperparameter Tuning Results**
 
@@ -1164,6 +1219,10 @@ models; Logistic Regression scored and F1 of 0.911 and the Partition Tree scored
 | Naive Bayes   |    adjust      | `True`  |
 | Partition Tree |   cp          | 0.0015  |
 
+
+During k-fold cross-validation, Partition Trees were are better for this data set and task than Naive Bayes 
+and Logistic Regression, by F1 score.
+
 **Table 2. Cross Validation Results**
 
 | Model         | F1 Score    | 
@@ -1172,6 +1231,8 @@ models; Logistic Regression scored and F1 of 0.911 and the Partition Tree scored
 | Partition Tree       |   0.957      | 
 | Logistic Regression |    0.945     |
 
+
+When applied to our test set, Partition Trees continued to perform better than both Naive Bayes and Logistic Regression.
 
 **Table 3. Test Results**
 
@@ -1182,6 +1243,23 @@ models; Logistic Regression scored and F1 of 0.911 and the Partition Tree scored
 | Logistic Regression |    0.911     | 
 
 
+Naive Bayes model application resulted in the following results:
+```{r nbConfusion, fig.cap="Naive Bayes Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
+cfm_nb <- confusionMatrix(as.factor(model_nb_y_hat), as.factor(testDF$isSpam))
+draw_confusion_matrix(cfm_nb, type="Naive Bayes")
+```
+
+Logistic Regression model application resulted in the following results:
+```{r glmConfusion, fig.cap="Logistic Regression Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
+cfm_logistic <- confusionMatrix(as.factor(model_glm_y_hat), as.factor(testDF$isSpam))
+draw_confusion_matrix(cfm_logistic, type="Logistic Regression")
+```
+
+Partition Tree model application resulted in the following results:
+```{r partTreeConfusion, fig.cap="Partition Tree Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
+cfm_rpart <- confusionMatrix(as.factor(model_rpart_y_hat), as.factor(testDF$isSpam))
+draw_confusion_matrix(cfm_rpart, type="Partition Tree")
+```
 
 
 
@@ -1192,11 +1270,7 @@ models; Logistic Regression scored and F1 of 0.911 and the Partition Tree scored
 
 
 
-
-
-
-
-
+\newpage
 # Conclusion
 
 
