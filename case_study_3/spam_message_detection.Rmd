@@ -44,9 +44,14 @@ library(MLmetrics)
 
 # Introduction
 
-Email usage has become so ubiquitous that having an email address is just as common as having a phone number. A brief examination of the benefits of using email reveals why. Email is a cost effective means of mass communication. Free services, such as gmail, make having an email address possible for anyone with an internet connection and a device that can send the message. 
+Email usage has become so ubiquitous that having an email address is just as common as having a phone number. A brief examination of the
+benefits of using email reveals why. Email is a cost effective means of mass communication. Free services, such as gmail, make having an
+email address possible for anyone with an internet connection and a device that can send the message. 
 
-Advertisers gravitate to the use of all accessible and efficient communication methods, and email fits this description well. Some advertisers send messages so frequently, that they irritate address owners, who then seek ways to end the stream of advertisements coming to their email address. Automatic filters that detect unwanted email advertisements, called spam, using machine learning and natural language processing. 
+Advertisers gravitate to the use of all accessible and efficient communication methods, and email fits this description well. Some
+advertisers send messages so frequently, that they irritate address owners, who then seek ways to end the stream of advertisements coming
+to their email address. Automatic filters that detect unwanted email advertisements, called spam, using machine learning and natural
+language processing. 
 
 This case study will demonstrate how to build a spam filter using an email dataset.
 
@@ -87,12 +92,13 @@ Five example engineered features are given below (the full list is provided in a
 
 ### An Analysis of Odds
 
-We used log-odds to assess the fit of a probability-based model, where the probability of a message being spam is equal to the count of
-spam words divided by the count of spam messages plus 0.5 and the probability of a message being not spam is equal to the count of
-non-spam words divided by the count of non-spam emails plus 0.5. This enabled us to gauge how apt the assumptions of the model are, with
-respect to spam and not-spam.
+We used log-odds to assess the fit of a probability-based model, where the probability of a message being spam is equal to
+the count of spam words divided by the count of spam messages plus 0.5 and the probability of a message being not spam is
+equal to the count of non-spam words divided by the count of non-spam emails plus 0.5. This enabled us to gauge how apt the
+assumptions of the model are, with respect to spam and not-spam.
 
-Using all training data for each class across all email data types, we gathered raw probability estimations and their mean log-odds per data type.
+Using all training data for each class across all email data types, we gathered raw probability estimations and their mean 
+log-odds per data type.
 
 | `Class`               | `doctype`      | `html`       | `public`      | `dtd`              | `transitional` | 
 |-----------------------|--------------|------------|-------------|------------------|--------------|
@@ -103,52 +109,13 @@ Using all training data for each class across all email data types, we gathered 
 
 With respect to the following analysis, the null hypothesis states that a given message is not spam:
 
-Based on the distribution of Type I and Type II errors of log likelihood values in *Fig. 2* - where Type I error is rejecting
+Based on the distribution of Type I and Type II errors of log likelihood values in **Fig. 1** - where Type I error is rejecting
 the null hypothesis when the null hypothesis should not be rejected and Type II error is failing to reject the null when there is
-statistically significant evidence the null should be rejected - the threshold cutoff for determining spam is a log-likelihood value of
--48. Translating this to a threshold value meaning, a message with a log-likelihood value of greater than -48 is spam and a message with
-a log-likelihood value of less than -48 is not spam.
+statistically significant evidence the null should be rejected - the threshold cutoff for determining spam is a log-likelihood
+value of -48. Translating this to a threshold value meaning, a message with a log-likelihood value of greater than -48 is spam 
+and a message with a log-likelihood value of less than -48 is not spam.
 
-The distributions of log-likelihoods for each class can be inspected in *Fig. 1*. Based on distribution spread of log
-likelihood ratios for each class, the probability approach appears better at identifying spam than messages that are not spam. This is
-because the spam class has an overall distribution - including the mean - closer to 0 than the non-spam class, which is indicative of a
-better fit. However, there is more repeatability of results within the non-spam class words as the interquartile range is much narrower
-than that of the spam class. This ultimately means words used in non-spam messages are not as unique to non-spam messages as those in
-spam messages. Intuitively, this makes sense because many of the words used in spam messages are often intentional misspellings - such as
-words that substitute "3" in place of "e" so spam filters cannot catch them as easily - that do not commonly appear in non-spam messages.
-Conversely, most words used in non-spam messages also appear in spam messages.
 
-Because of this, in addition to the Naive Bayes approach, we constructed additional models to classify spam vs. not spam, including
-logistic regression and a decision tree classifier.
-
-## Modeling
-
-We experimented with three modeling techniques on this dataset: logistic regression, naive bayes, and parition trees.
-Logistic regression was primary employed as a baseline model.
-Since naive bayes and parition trees can describe non-linear decision boundries,
- these models could provide better performance than logistic regression.
-
-Since hyperparameters must be selected for naive bayes and parition trees, 
- we the data into two sets by random sampling: 70% for training and 30% for test.
-Each model was fit with 3-fold cross-validation on the training data to select the hyperparameters 
- where F1-score was used as the selection criterion.
-The hyperparameters selected for each model are shown in table 1 
- and the F1-scores from cross-validation are shown in table 2.
-After selecting hyperparameters, we compared the performance of each model on the test set (shown in table 3).
-
-### Hyperparameters
-
-We used normal logistic regression, thus there were no hyperparameters to tune.
-
-For naive bayes, we tuned the following parameters:
-
-* `laplace` - laplace smoothing
-* `usekernel` - if `TRUE` use a kernel density estimate, else use gaussian density estimate
-* `adjust` - if `TRUE` allow the bandwidth of kernel density estimate to be adjusted (more flexiable), else do not allow adjustments
-
-For partition trees, we tuned the following parameters:
-
-* `cp` - minimum decrease in lack of fit for a new split 
 
 
 ```{r, read_data, include=FALSE}
@@ -470,30 +437,6 @@ testLogLikelihood = sapply(testMessageWords, getLogLikelihood, trainTable)
 tapply(testLogLikelihood, testSpam, summary)
 ```
 
-```{r, spamBoxPlot, echo=F, warning=F, fig.cap="Naive Bayes Log Likelihood Distributions", fig.height=3.5}
-# generate the box plot
-SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
-#boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly #Selected Messages\n by  Classification", ylim=c(-500, 500))
-data.frame('testLogLikelihood' = testLogLikelihood,
-           'SPAM_CLASS' = SPAM_CLASS) %>%
-  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
-  geom_boxplot() +
-  ylim(-500,500) +
-  ylab("Log Likelihood Ratio Distribution") +
-  xlab("Message Classification") +
-  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
-  #labs(caption = paste(
-  #    'Figure 1:\n',
-  #    ' NB', sep='')
-  #    ) +
-  theme_minimal() +
-   theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0)
-  )
-```
-
-
 ```{r, NB_misclassification, echo=F, include=F}
 # misclassification rate and using reference value tau
 type_1_Error = function(tau, logLikelihoodVals, spam){
@@ -546,8 +489,9 @@ t2 = max(xFoldII$error[ xFoldII$values < tauFoldI ])
 #max(tFold2)
 ```
 
-Below, the Type I Error (rejecting the null hypothesis when the null hypothesis should not be rejected) level of significance is 0.01 and the Type II Error (failing to reject the null hypothesis where the null hypothesis is true) is 0.05.
-```{r ErrorTypes, fig.cap="NB Type I and Type II Error", echo=F, warning=F, fig.align='center', fig.pos="htbp"}
+Below, the Type I Error (rejecting the null hypothesis when the null hypothesis should not be rejected) level of significance is 0.01 and
+the Type II Error (failing to reject the null hypothesis where the null hypothesis is true) is 0.05.
+```{r ErrorTypes, fig.cap="NB Type I and Type II Error", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
 library(RColorBrewer)
 cols = brewer.pal(9, "Set1")[c(3, 4, 5)]
 plot(xFoldII$error ~ xFoldII$values,  type = "l", col = cols[1], lwd = 3,
@@ -567,8 +511,71 @@ text(tauFoldI + 20, 0.05, pos = 4,
      paste("Type II Error = ", round(t2, digits = 2)), 
      col = cols[1])
 ```
+\pagebreak
 
+The distributions of log-likelihoods for each class can be inspected in **Fig. 2**. Based on distribution spread of log
+likelihood ratios for each class, the probability approach appears better at identifying spam than messages that are not spam. This is
+because the spam class has an overall distribution - including the mean - closer to 0 than the non-spam class, which is indicative of a
+better fit. However, there is more repeatability of results within the non-spam class words as the interquartile range is much narrower
+than that of the spam class. This ultimately means words used in non-spam messages are not as unique to non-spam messages as those in
+spam messages. Intuitively, this makes sense because many of the words used in spam messages are often intentional misspellings - such as
+words that substitute "3" in place of "e" so spam filters cannot catch them as easily - that do not commonly appear in non-spam messages.
+Conversely, most words used in non-spam messages also appear in spam messages.
 
+Because of this, in addition to the Naive Bayes approach, we constructed additional models to classify spam vs. not spam, including
+logistic regression and a decision tree classifier.
+```{r, spamBoxPlot, echo=F, warning=F, fig.cap="Naive Bayes Log Likelihood Distributions", fig.align='center', out.width = "75%", out.height = "75%"}
+# generate the box plot
+SPAM_CLASS = c("non-spam", "spam")[1 + testSpam]
+#boxplot(testLogLikelihood ~ SPAM_CLASS, ylab = "Log Likelihood Ratio Distribution", main = "Distribution of Randomly #Selected Messages\n by  Classification", ylim=c(-500, 500))
+data.frame('testLogLikelihood' = testLogLikelihood,
+           'SPAM_CLASS' = SPAM_CLASS) %>%
+  ggplot(aes(x = SPAM_CLASS, y = testLogLikelihood)) +
+  geom_boxplot() +
+  ylim(-500,500) +
+  ylab("Log Likelihood Ratio Distribution") +
+  xlab("Message Classification") +
+  ggtitle("Distribution of Randomly Selected Messages\n by  Classification") +
+  #labs(caption = paste(
+  #    'Figure 1:\n',
+  #    ' NB', sep='')
+  #    ) +
+  theme_minimal() +
+   theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.caption = element_text(hjust = 0)
+  )
+```
+\pagebreak
+
+## Modeling
+
+We experimented with three modeling techniques on this dataset: logistic regression, naive bayes, and parition trees.
+Logistic regression was primary employed as a baseline model.
+Since naive bayes and parition trees can describe non-linear decision boundries,
+ these models could provide better performance than logistic regression.
+
+Since hyperparameters must be selected for naive bayes and parition trees, 
+ we the data into two sets by random sampling: 70% for training and 30% for test.
+Each model was fit with 3-fold cross-validation on the training data to select the hyperparameters 
+ where F1-score was used as the selection criterion.
+The hyperparameters selected for each model are shown in table 1 
+ and the F1-scores from cross-validation are shown in table 2.
+After selecting hyperparameters, we compared the performance of each model on the test set (shown in table 3).
+
+### Hyperparameters
+
+We used normal logistic regression, thus there were no hyperparameters to tune.
+
+For naive bayes, we tuned the following parameters:
+
+* `laplace` - laplace smoothing
+* `usekernel` - if `TRUE` use a kernel density estimate, else use gaussian density estimate
+* `adjust` - if `TRUE` allow the bandwidth of kernel density estimate to be adjusted (more flexiable), else do not allow adjustments
+
+For partition trees, we tuned the following parameters:
+
+* `cp` - minimum decrease in lack of fit for a new split
 
 ```{r, data prep, echo=F, message=F, warning=F}
 funcList = list(
@@ -1224,6 +1231,7 @@ The partition tree was tuned by a using a complexity parameter range from 0 to 0
 | Naive Bayes   |    adjust      | `True`  |
 | Partition Tree |   cp          | 0.0015  |
 
+\pagebreak
 
 During k-fold cross-validation, Partition Trees were are better for this data set and task than Naive Bayes 
 and Logistic Regression, by F1 score.
@@ -1237,6 +1245,7 @@ and Logistic Regression, by F1 score.
 | Logistic Regression |    0.945     |
 
 
+
 When applied to our test set, Partition Trees continued to perform better than both Naive Bayes and Logistic Regression.
 
 **Table 3. Test Results**
@@ -1248,36 +1257,25 @@ When applied to our test set, Partition Trees continued to perform better than b
 | Logistic Regression |    0.911     | 
 
 
-Naive Bayes model application resulted in the following results:
+The following results were the comprehensive, summary-level results of our three models:
 ```{r nbConfusion, fig.cap="Naive Bayes Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
 cfm_nb <- confusionMatrix(as.factor(model_nb_y_hat), as.factor(testDF$isSpam))
 draw_confusion_matrix(cfm_nb, type="Naive Bayes")
 ```
 
-Logistic Regression model application resulted in the following results:
 ```{r glmConfusion, fig.cap="Logistic Regression Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
 cfm_logistic <- confusionMatrix(as.factor(model_glm_y_hat), as.factor(testDF$isSpam))
 draw_confusion_matrix(cfm_logistic, type="Logistic Regression")
 ```
 
-Partition Tree model application resulted in the following results:
 ```{r partTreeConfusion, fig.cap="Partition Tree Confusion Matrix", echo=F, warning=F, fig.align='center', out.width = "75%", out.height = "75%"}
 cfm_rpart <- confusionMatrix(as.factor(model_rpart_y_hat), as.factor(testDF$isSpam))
 draw_confusion_matrix(cfm_rpart, type="Partition Tree")
 ```
 
-
-
-
-
-
-
-
-
-
 \newpage
 # Conclusion
-
+**Da-dum**
 
 \newpage
 
