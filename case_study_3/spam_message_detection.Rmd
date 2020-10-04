@@ -129,7 +129,7 @@ Since naive bayes and parition trees can describe non-linear decision boundries,
  these models could provide better performance than logistic regression.
 
 Since hyperparameters must be selected for naive bayes and parition trees, 
- we the data into two sets by random sampling: 70% for training and 30% for test.
+ we split the data into two sets by random sampling: 70% for training and 30% for test.
 Each model was fit with 3-fold cross-validation on the training data to select the hyperparameters 
  where F1-score was used as the selection criterion.
 The hyperparameters selected for each model are shown in table 1 
@@ -1204,7 +1204,7 @@ model_glm_y_hat <- predict(model_glm, newdata = select(testDF, -isSpam))
 ### Model Results
 Using F1 as the baseline metric for error assessment, the Partition Tree outperformed Naive Bayes and Logistic Regression during both
 internal and external cross-validation. On internal 3-fold cross-validation, the Partition Tree scored an F1 of 0.957, while the Naive
-Bayes - outperforming the other probability-based model (Logistic Regression) by 0.042 - scored 0.945.
+Bayes - outperformed the other probability-based model (Logistic Regression) by 0.042 - scored 0.945.
 
 After applying the models to the external test set, error further diverged between the tree-based and probability-based models. Contrary
 to the internal cross-validation results, Logistic Regression also appears to have generalized better than Naive Bayes, marginally
@@ -1278,6 +1278,9 @@ draw_confusion_matrix(cfm_rpart, type="Partition Tree")
 \newpage
 # Conclusion
 
+The creation of spam filtration tools is highly dependent on a combination of text preprocessing methodologies and the selection of an approriate classifier. In this study, a baseline logistic regression model was compared to the classifications of a partion tree and a naive bayes model. The models were compared using a balanced F1 score and the partition tree model outperformed both the baseline and the naive bayes model with a score of .953. This suggests that decsion tree models could be better suited to a spam detection task.
+
+The findings of this study may not generalize well due to the constant evolution of advertising lingo and the adaptations that advertisers make to circumvent spam filters. The data are approaching obsolesance so both the text preprocessing scheme and the engineered features may not hold value. This study recommends using an updated dataset and a new feature set that more aptly reflect the nature and content of modern email systems.
 
 \newpage
 
@@ -1320,6 +1323,8 @@ The following boolean values (logical) and numeric features were derived from th
 | 27       | Whether "wrote:" appears in the email body                              | Logical |
 | 28       | The average length of words in the email body                           | Numeric |
 | 29       | The number of dollar signs in the email body                            | Numeric |
+
+\newpage
 
 ## Spam Words
 
