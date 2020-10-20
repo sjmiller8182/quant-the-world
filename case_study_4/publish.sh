@@ -1,6 +1,6 @@
 #!/bin/bash
 
-jupyter nbconvert --to latex RF_XGB_SVM.ipynb
-pdflatex RF_XGB_SVM.tex
-rm RF_XGB_SVM.log RF_XGB_SVM.out RF_XGB_SVM.aux RF_XGB_SVM.tex
-rm -r RF_XGB_SVM_files/
+jupyter nbconvert --to latex 'Random Forest, XGBoost, and SVM.ipynb'
+pdflatex 'Random Forest, XGBoost, and SVM.tex'
+rm *.log *.out *.aux *.tex
+rm -r 'Random Forest, XGBoost, and SVM_files'/
