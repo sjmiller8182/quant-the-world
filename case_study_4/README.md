@@ -10,7 +10,7 @@ The third model, Support Vector Machine, operates by searching for a hyperplane 
 
 This study applies Random Forest, XGBoost, and an SVM to the same data set and the models are then compared in terms of processing speed, model accuracy, and model loss. Speed is measured across a 2.1GHz processor with 32 cores. Because SVM is not parallelizable, core performance testing is fixed across only one processor core for the SVM.
 
-[See Full Report](./Random Forest, XGBoost, and SVM.pdf)
+[See Full Report](./Random%20Forest%2C%20XGBoost%2C%20and%20SVM.pdf)
 
 **Language**: Python
 
