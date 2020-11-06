@@ -27,6 +27,9 @@ case_study_4/data/case_8.csv
 case_study_4/*-e.txt
 case_study_4/*-o.txt
 
+# case study 6 ignores
+case_study_6/data/HIGGS.csv
+
 # R ignores
 
 # History files
