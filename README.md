@@ -13,5 +13,5 @@ Quantifying the World
   * This study applies Random Forest, XGBoost, and an SVM to the same data set and the models are then compared in terms of processing speed, model accuracy, and model loss.
 * Case Study 5: [Imputation of Housing Data](./case_study_5)
   * In this case study, we analyze the missingness of data and create imputations in the Russian Housing Dataset.
-* Case Study 6: [Searching for the Higgs Boson with Deep Learning]()
+* Case Study 6: [Searching for the Higgs Boson with Deep Learning](./case_study_6)
   * In this case study, we replicate the paper “Searching for Exotic Particles in High-energy Physics with Deep Learning” by Baldi, P., P. Sadowski, and D. Whiteson.
