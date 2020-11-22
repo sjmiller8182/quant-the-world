@@ -1,5 +1,5 @@
 
-# Searching for the Higgs Boson with Deep Learning
+# Optimizing for a Model for Minimal Financial Loss
 
 ## Summary
 
