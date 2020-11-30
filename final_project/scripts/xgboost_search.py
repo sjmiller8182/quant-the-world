@@ -48,7 +48,7 @@ cost_scorer = make_scorer(cost_score, greater_is_better=False)
 
 
 
-data = pd.read_csv('./final_project.csv')
+data = pd.read_csv('../final_project.csv')
 
 y = data['y']
 X = data.drop(['y'], axis=1)
@@ -116,7 +116,7 @@ print('X_train shape: ', X_train.shape,
 
 
 xgb_params = {
-    'n_estimators': np.arange(100, 1000, 10, dtype='int'),
+    'n_estimators': np.arange(100, 500, 10, dtype='int'),
     'learning_rate': np.linspace(0.01, 1, num=1000, dtype='float'),
     'gamma':np.geomspace(0.001, 10, num=1000, dtype='float'),
     'max_depth':[d for d in range(1, 11)],
@@ -130,14 +130,13 @@ xgb_params = {
 
 xgb = XGBClassifier(booster='gbtree',
                     early_stopping_rounds=10,
-                    random_state=random_state,
-                    nthread=36)
+                    random_state=random_state)
 
 xgb_search = RandomizedSearchCV(xgb, 
                                 xgb_params,
                                 random_state=random_state,
                                 scoring=cost_scorer,
-                                n_iter=1000,
+                                n_iter=100,
                                 cv=5,
                                 verbose=0,
                                 n_jobs=-1)
