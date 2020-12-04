@@ -15,3 +15,5 @@ Quantifying the World
   * In this case study, we analyze the missingness of data and create imputations in the Russian Housing Dataset.
 * Case Study 6: [Searching for the Higgs Boson with Deep Learning](./case_study_6)
   * In this case study, we replicate the paper “Searching for Exotic Particles in High-energy Physics with Deep Learning” by Baldi, P., P. Sadowski, and D. Whiteson.
+* Final Project: [Optimizing for a Model for Minimal Financial Loss](./final_project)
+  * In this case study, we implement a classification model to minimize financial loss.
